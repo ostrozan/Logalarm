@@ -122,4 +122,13 @@ bool GsmModule::GsmAck (String str)
 	else return false;
 }
 
+String GsmModule::GetDateTime ()
+{
+	COMGSM.print ("AT+CCLK?\r\n");
+	if (GsmAck ("OK"))
+	{
+
+	}
+	else return "ERR";
+}
 

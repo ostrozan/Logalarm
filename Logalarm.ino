@@ -2,13 +2,13 @@
 #include <EEPROM.h>
 #include "GsmModule.h"
 #include "Logalarm.h"
-#include "DateTime.h"
+//#include "DateTime.h"
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire (ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors (&oneWire);
-DateTime dateTime;
+//DateTime dateTime;
 GsmModule GSM;
 
 void setup ()
@@ -16,8 +16,8 @@ void setup ()
 	COMGSM.begin (9600);
 	while (!COMGSM);
 	GSM.Init ();
-	alarm_loops[0] = { SM1};
-	alarm_loops[1] = { SM2};
+	alarm_loops[0] = { SM1 };
+	alarm_loops[1] = { SM2 };
 	alarm_loops[2] = { SM3 };
 	alarm_loops[3] = { SM4 };
 
@@ -52,7 +52,7 @@ void setup ()
 		// set the resolution to TEMPERATURE_PRECISION bit (Each Dallas/Maxim device is capable of several different resolutions)
 		sensors.setResolution (tempDeviceAddress, TEMPERATURE_PRECISION);
 	}
-	dateTime.Init ();
+	//dateTime.Init ();
 	Timer1.initialize ();
 	Timer1.attachInterrupt (TimerTick);
 	////////test
@@ -109,6 +109,11 @@ void setup ()
 
 void loop ()
 {
+	if (COMGSM.available ())
+	{
+		GsmReceive ();
+	}
+
 	if (Serial.available ())
 	{
 		GetSerialData ();
@@ -283,7 +288,7 @@ void Alarm (char loop_num)
 
 void GsmAlarm ()
 {
-	
+
 	if (casProzvaneni || casZpozdeniSms)return;//pokud zrovna prozvani  - nepokracuj
 	//pokud neceka zadna sms na odeslani
 	if (!u.s.telNums[0].is_waiting_to_send_sms && !u.s.telNums[1].is_waiting_to_send_sms && !u.s.telNums[2].is_waiting_to_send_sms)
@@ -312,7 +317,7 @@ void GsmAlarm ()
 				char buff[17];
 				sprintf (buff, "poplach smycka %u", loop_in_alarm);
 				u.s.telNums[i].is_waiting_to_send_sms = false;
-				GSM.Sms (u.s.telNums[i].number,buff);
+				GSM.Sms (u.s.telNums[i].number, buff);
 				casZpozdeniSms = 5;//5 sec mezi jednotlivymi sms a pripadnym prozvanenim
 				break;
 			}
@@ -363,7 +368,7 @@ void TimerTick ()
 		Serial.println (entry_timer, 10);
 		if (--entry_timer == 0)
 		{
-		//	is_active_entry_delay = false;
+			//	is_active_entry_delay = false;
 			Serial.println ("prichod docasovan");
 
 		}
@@ -382,7 +387,7 @@ void TimerTick ()
 	if (casProzvaneni > 0)
 	{
 		Serial.print ("ring");
-		Serial.println (casProzvaneni,10);
+		Serial.println (casProzvaneni, 10);
 		casProzvaneni--;
 		if (casProzvaneni == 5)
 		{
@@ -404,31 +409,31 @@ void TimerTick ()
 		Serial.print ("sms");
 		Serial.println (casZpozdeniSms, 10);
 		casZpozdeniSms--;
-	//	//COMDEBUG.println (casZpozdeniSms, 10);
-		//if (--casZpozdeniSms == 0)SendLocalSms (currCallingInput);//
-	//}
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	if (inputs[i].isWaitingCall)
-	//	{
-	//		//COMDEBUG.println ("aaa");
-	//		if (inputs[i].counter == -1)inputs[i].counter = 10;
-	//		if (inputs[i].counter > 0)
-	//		{
-	//			inputs[i].counter--;
-	//			//COMDEBUG.println (inputs[i].counter,10);
-	//			if (inputs[i].counter == 0)
-	//			{
+		//	//COMDEBUG.println (casZpozdeniSms, 10);
+			//if (--casZpozdeniSms == 0)SendLocalSms (currCallingInput);//
+		//}
+		//for (int i = 0; i < 4; i++)
+		//{
+		//	if (inputs[i].isWaitingCall)
+		//	{
+		//		//COMDEBUG.println ("aaa");
+		//		if (inputs[i].counter == -1)inputs[i].counter = 10;
+		//		if (inputs[i].counter > 0)
+		//		{
+		//			inputs[i].counter--;
+		//			//COMDEBUG.println (inputs[i].counter,10);
+		//			if (inputs[i].counter == 0)
+		//			{
 
-	//				inputs[i].isWaitingCall = false;
-	//				inputs[i].counter = -1;
-	//				GSM.Call (inputs[i].tel);
-	//				casProzvaneni = 30;
-	//				inputs[i].isCallingGsm = true;
-	//				currCallingInput = i;
-	//			}
-	//		}
-	//	}
+		//				inputs[i].isWaitingCall = false;
+		//				inputs[i].counter = -1;
+		//				GSM.Call (inputs[i].tel);
+		//				casProzvaneni = 30;
+		//				inputs[i].isCallingGsm = true;
+		//				currCallingInput = i;
+		//			}
+		//		}
+		//	}
 	}
 	//if (casBlokovaniSms)
 	//{
@@ -488,12 +493,12 @@ void CtiTeploty ()
 
 void GetSerialData ()
 {
-	
+
 	while (Serial.available ())
 	{
 		recChar = Serial.read ();
 		rxBuffer[rxBufferIndex] = (char)recChar;
-		if (rxBuffer[rxBufferIndex-1] == 0x0d && recChar == 0x0a)
+		if (rxBuffer[rxBufferIndex - 1] == 0x0d && recChar == 0x0a)
 		{
 			//COMDEBUG.println ("recmsg");
 			rxBufferIndex = 0;
@@ -507,26 +512,26 @@ void GetSerialData ()
 	if (rxBuffer[0] == 'W')
 	{
 		//memcpy (u.data, &rxBuffer[1], sizeof (u));
-		
+
 		char pom[18];
-		memcpy (&u.s.entry_delay,&rxBuffer[1], 2);
+		memcpy (&u.s.entry_delay, &rxBuffer[1], 2);
 		memcpy (pom, &u.s.entry_delay, 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.exit_delay, &rxBuffer[3], 2);
+		memcpy (&u.s.exit_delay, &rxBuffer[3], 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.time_alarm, &rxBuffer[5], 2);
+		memcpy (&u.s.time_alarm, &rxBuffer[5], 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.time_zone_activ, &rxBuffer[7], 2);
+		memcpy (&u.s.time_zone_activ, &rxBuffer[7], 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.time_zone_wait, &rxBuffer[9], 2);
+		memcpy (&u.s.time_zone_wait, &rxBuffer[9], 2);
 		//Serial.write (pom, 2);
 		memcpy (u.s.loop_types, &rxBuffer[11], 4);
 		memcpy (&u.s.loop_activate, &rxBuffer[12], 1);
 
 		//tel 1
 		memcpy (u.s.telNums[0].number, &rxBuffer[16], 10);
-		memcpy (&u.s.telNums[0].is_sms_control,&rxBuffer[26], 1);
-		memcpy (&u.s.telNums[0].is_ring_control,&rxBuffer[27],1 );
+		memcpy (&u.s.telNums[0].is_sms_control, &rxBuffer[26], 1);
+		memcpy (&u.s.telNums[0].is_ring_control, &rxBuffer[27], 1);
 		memcpy (&u.s.telNums[0].send_sms, &rxBuffer[28], 1);
 		memcpy (&u.s.telNums[0].ring, &rxBuffer[29], 1);
 		//tel 2
@@ -542,18 +547,18 @@ void GetSerialData ()
 		memcpy (&u.s.telNums[2].send_sms, &rxBuffer[60], 1);
 		memcpy (&u.s.telNums[2].ring, &rxBuffer[61], 1);
 		//spinacky
-		memcpy ( u.s.minutespans, &rxBuffer[64], 16);
+		memcpy (u.s.minutespans, &rxBuffer[64], 16);
 		//Serial.write (pom, 16);
 		//teploty
-		memcpy ( &u.s.teplota, &rxBuffer[80], 2);
+		memcpy (&u.s.teplota, &rxBuffer[80], 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.hystereze, &rxBuffer[82], 1);
+		memcpy (&u.s.hystereze, &rxBuffer[82], 1);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.alarmT1, &rxBuffer[83], 2);
+		memcpy (&u.s.alarmT1, &rxBuffer[83], 2);
 		//Serial.write (pom, 2);
-		memcpy ( &u.s.alarmT2, &rxBuffer[85], 2);
+		memcpy (&u.s.alarmT2, &rxBuffer[85], 2);
 		//Serial.write (pom, 2);
-		memcpy(&u.s.aktivAlarmT1, &rxBuffer[87],1 );
+		memcpy (&u.s.aktivAlarmT1, &rxBuffer[87], 1);
 		memcpy (&u.s.aktivAlarmT2, &rxBuffer[88], 1);
 		Serial.println ("ack");
 		EEPROM.put (0, u.data);
@@ -567,7 +572,7 @@ void GetSerialData ()
 		//}
 		String pomstr;
 		int pom;
-		Serial.print ( u.s.entry_delay, 10);
+		Serial.print (u.s.entry_delay, 10);
 		//Serial.print (pom,2);		
 		Serial.write (' ');
 		Serial.print (u.s.exit_delay, 10);
@@ -582,7 +587,7 @@ void GetSerialData ()
 		Serial.print (u.s.time_zone_wait, 10);
 		//Serial.write (pom, 2);
 		Serial.print (' ');
-		Serial.print (u.s.loop_types[0],10);
+		Serial.print (u.s.loop_types[0], 10);
 		Serial.print (u.s.loop_types[1], 10);
 		Serial.print (u.s.loop_types[2], 10);
 		Serial.print (u.s.loop_types[3], 10);
@@ -590,10 +595,10 @@ void GetSerialData ()
 		Serial.print (u.s.loop_activate, 10);
 		Serial.print (' ');
 		//tel 1
-	    //pom = atoi (u.s.telNums[0].number);
-		Serial.print (String(u.s.telNums[0].number));
+		//pom = atoi (u.s.telNums[0].number);
+		Serial.print (String (u.s.telNums[0].number));
 		Serial.print (' ');
-		Serial.print (u.s.telNums[0].is_sms_control,10);
+		Serial.print (u.s.telNums[0].is_sms_control, 10);
 		Serial.print (' ');
 		Serial.print (u.s.telNums[0].is_ring_control, 10);
 		Serial.print (' ');
@@ -605,13 +610,13 @@ void GetSerialData ()
 	//	pom = atoi (u.s.telNums[1].number);
 		Serial.print (String (u.s.telNums[1].number));
 		Serial.print (' ');
-		Serial.print (u.s.telNums[1].is_sms_control,10);
+		Serial.print (u.s.telNums[1].is_sms_control, 10);
 		Serial.print (' ');
-		Serial.print (u.s.telNums[1].is_ring_control,10);
+		Serial.print (u.s.telNums[1].is_ring_control, 10);
 		Serial.print (' ');
-		Serial.print (u.s.telNums[1].send_sms,10);
+		Serial.print (u.s.telNums[1].send_sms, 10);
 		Serial.print (' ');
-		Serial.print (u.s.telNums[1].ring,10);
+		Serial.print (u.s.telNums[1].ring, 10);
 		Serial.print (' ');
 		//tel 3
 	//	pom = atoi (u.s.telNums[2].number);
@@ -652,9 +657,9 @@ void GetSerialData ()
 		Serial.print (':');
 		Serial.print (u.s.alarmT2, 10);
 		Serial.print (':');
-		Serial.print (u.s.aktivAlarmT1,10);
+		Serial.print (u.s.aktivAlarmT1, 10);
 		Serial.print (':');
-		Serial.print (u.s.aktivAlarmT2,10);
+		Serial.print (u.s.aktivAlarmT2, 10);
 		Serial.print (' ');
 		Serial.println ("data");
 	}
@@ -662,25 +667,36 @@ void GetSerialData ()
 
 void GsmReceive ()
 {
-	String gsm_string;
+	boolean isRec = false;
+	String gsm_string = "";
+	char c;
 	signed int start, end;
 	char telnmb[10];//pomocna pro tel cislo
-	while (COMGSM.available ())
+	while (isRec == false)
 	{
-		gsm_string = COMGSM.readString ();
+		if (COMGSM.available ())
+		{
+
+			c = (char)COMGSM.read ();
+			gsm_string += c;
+			if (c == '\n')isRec = true;
+		}
 	}
+
 #ifdef DEBUG
 	COMDEBUG.println (gsm_string);
 #endif // DEBUG
+	//Serial.println (gsm_string);
 
-
-	start = gsm_string.indexOf ("SQ:", 5);
+	start = gsm_string.indexOf ("+CSQ:");
+	//Serial.print (">>");
+	//Serial.println (start,10);
 	if (start != -1)
 	{
-		//COMDEBUG.println (">>");
+		//Serial.println (">>");
 		//
 		//start = gsm_string.indexOf ("SQ:", 5) + 4;
-		start += 4;
+		start += 6;
 		end = start + 2;
 		gsmSignal = gsm_string.substring (start, end);
 		//COMDEBUG.println (gsmSignal);
@@ -698,6 +714,28 @@ void GsmReceive ()
 		}
 	}
 
+	//DATE TIME
+	if (gsm_string.indexOf ("CCLK") != -1)
+	{
+		start = gsm_string.indexOf ("+CCLK");
+		//Serial.print ("index "); Serial.println (start, 10);
+		if (start != -1)
+		{
+			char c[3];
+			gsm_string.toCharArray (c, 3, start + 8);
+			ts.year = atoi (c) + 2000;
+			gsm_string.toCharArray (c, 3, start + 11);
+			ts.mon = atoi (c);
+			gsm_string.toCharArray (c, 3, start + 14);
+			ts.mday = atoi (c);
+			gsm_string.toCharArray (c, 3, start + 17);
+			ts.hour = atoi (c);
+			gsm_string.toCharArray (c, 3, start + 20);
+			ts.min = atoi (c);
+			gsm_string.toCharArray (c, 3, start + 23);
+			ts.sec = atoi (c);
+		}
+	}
 
 	if (gsm_string.indexOf ("CARR") != -1 /*&& gsmData.isRinging*/)//no carrier
 	{
@@ -828,12 +866,12 @@ void SendStatus ()
 
 void SaveEvent (int ev, char nmb_i_o)
 {
-	event.yy = dateTime.dateTimeStr.year - 2000;
-	event.mnt = dateTime.dateTimeStr.mon;
-	event.day = dateTime.dateTimeStr.mday;
-	event.hr = dateTime.dateTimeStr.hour;
-	event.min = dateTime.dateTimeStr.min;
-	event.ss = dateTime.dateTimeStr.sec;
+	event.yy = ts.year - 2000;
+	event.mnt = ts.mon;
+	event.day = ts.mday;
+	event.hr = ts.hour;
+	event.min = ts.min;
+	event.ss = ts.sec;
 	event.evnt = ev | nmb_i_o;
 	unsigned char ee_ptr_events;
 	EEPROM.get (EE_EVENT_POINTER, ee_ptr_events);
@@ -919,49 +957,56 @@ void ChangeOutput (char out, char state, int ev)//cislo vystupu,cislo pinu,stav
 	sendOutsFlg = true;
 }
 
+
+String TSToString (TS ts)
+{
+	char str[22];
+	sprintf (str, "%u.%u.%u  %02u:%02u:%02u", ts.mday, ts.mon, ts.year, ts.hour, ts.min, ts.sec);
+	return String (str);
+}
+
+
 void SendDateTime ()
 {
 	static char cnt = 0;
 	char pomstr[10];
-	//COMDEBUG.println ("tick");
-	if (++cnt > 30)
+	//Serial.print ("cnt");
+	//Serial.println (cnt,10);
+	//cnt++;
+	//
+	if (++cnt > 10)
 	{
 		cnt = 0;
 		GSM.Signal ();
-		//sendDateTimeFlg = false;
 	}
-	//else
-	//{
+
 	sendDateTimeFlg = false;
 	if (numberOfFDallasDevices > 0)CtiTeploty ();
-
 	sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
-	dateTime.GetDateTime ();
-	if (dateTime.dateTimeStr.sec == 0)minutes = dateTime.GetMinutes ();
-	Serial.println ("dt>" + dateTime.ToString () + '<' + pomstr + '<' + gsmSignal);
+	Serial.println ("dt>" + TSToString (ts) + '<' + pomstr + '<' + gsmSignal);
 	delay (10);
-	//}
+	COMGSM.print ("AT+CCLK?\n\r");
 }
 
 void TempControl ()
 {
 	if (teploty_new[0] > u.s.teplota)digitalWrite (TERMOSTAT, LOW);
 	else if (teploty_new[0] < u.s.teplota - u.s.hystereze)digitalWrite (TERMOSTAT, HIGH);
-	if(alarmT1blocked == false)
+	if (alarmT1blocked == false)
+	{
+		if (teploty_new[0] > u.s.alarmT1 /*&& u.s.aktivAlarmT1 == '1'*/)
 		{
-			if (teploty_new[0] > u.s.alarmT1 /*&& u.s.aktivAlarmT1 == '1'*/)
-			{
-				Serial.println ("alarm T1 hi");
-				alarmT1blocked = true;
-			}
-			else if (teploty_new[0] < u.s.alarmT1 && u.s.aktivAlarmT1 == '0')
-			{
-				Serial.println ("alarm T1 lo");
-				alarmT1blocked = true;
-			}
-     }
+			Serial.println ("alarm T1 hi");
+			alarmT1blocked = true;
+		}
+		else if (teploty_new[0] < u.s.alarmT1 && u.s.aktivAlarmT1 == '0')
+		{
+			Serial.println ("alarm T1 lo");
+			alarmT1blocked = true;
+		}
+	}
 
-	if (alarmT2blocked ==false)
+	if (alarmT2blocked == false)
 	{
 		if (teploty_new[1] > u.s.alarmT2 && u.s.aktivAlarmT2 == '1')
 		{

@@ -32,6 +32,7 @@ private:
 	String rx_buffer;
 	String readSerial ();
 	bool GsmAck (String str);
+	String GetDateTime ();
 };
 
 #endif
