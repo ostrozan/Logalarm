@@ -28,7 +28,7 @@
 #define SIR  4//rele - sirena
 #define GSM_OUT   5//rele ovladane gsm
 #define AKTIV   6
-#define SPIN_HOD   6
+#define SPIN_HOD   7
 #define ZONA   8
 #define TERMOSTAT   9
 
@@ -73,7 +73,8 @@
 
 #endif // CONTROLCOMBLUE
 #define INPUTS_CONTROL outputs[0].IsInputControl||outputs[1].IsInputControl||outputs[2].IsInputControl||outputs[3].IsInputControl||outputs[4].IsInputControl||outputs[5].IsInputControl
-
+#define LOOP_ACT_LO u.s.loop_activate == '0'
+#define LOOP_ACT_HI u.s.loop_activate == '1'
 #pragma endregion
 
 #pragma region typedefs
@@ -90,16 +91,16 @@ typedef struct
 
 Event event;
 
-typedef enum { no_use,inst,del,h24} LoopTypes;
+typedef enum { no_use,inst,del,h24,zona} LoopTypes;
 typedef enum { closed,open } LoopState;
 
 typedef struct
 {
 	unsigned char input;
-	LoopTypes type;
-	LoopState state;
+	unsigned char type;
+	unsigned char state;
 }AlarmLoop;
-AlarmLoop alarm_loops[4];
+unsigned char alarm_loops[4] = { SM1,SM2,SM3,SM4 };
 typedef struct In
 {
 	char func_index;
@@ -130,34 +131,15 @@ typedef struct
 	long timeOfPulse;
 }ControlTimes;
 
+typedef enum {sir,gsm,thermo,swclk} Outfunc;
+
 typedef struct Out
 {
-	boolean IsTimeControl =0;
-	boolean IsInputControl=0;
-	boolean IsExtControl=0;
-	boolean IsUseSwitchClk=0;
-	boolean IsUseProgTmr=0;
-	boolean IsUseThermostat=0;
-	int Temperature=0;
-	char TempHysteresis=0;
-	int TempAlarmHi=0;
-	int TempAlarmLo=0;
-	boolean IsAlarmHi=0;
-	boolean IsAlarmLo=0;
-	char ktere_cidlo=0;
-	boolean IsTrvale=0;
-	boolean IsNastCas=0;
-	boolean IsSwitchOn=0;
-	boolean IsSwitchOff=0;
-	boolean IsAnyChange=0;
-	//MinuteSpan minutespans[4];
-	ControlTimes controlTimes;
-	//neposilat ven
+	Outfunc func;
 	char state=0;
 	char nmb=0;
 	boolean blockSendOn=0;
 	boolean blockSendOff=0;
-	char next_time_msg[6] = { 0,0,0,0,0,0 };
 }Out;
 
 struct 
@@ -217,11 +199,12 @@ char maskIn;
 typedef struct
 {
 	char number[10];
-	char sms[20];
-	boolean is_sms_control;
-	boolean is_ring_control;
-	boolean send_sms;
-	boolean ring;
+	char is_sms_control;
+	char is_ring_control;
+	char send_sms;
+	char ring;
+	char is_waiting_to_send_sms;
+	char is_waiting_to_calling;
 }TelNum;
 
 
@@ -247,13 +230,14 @@ DeviceAddress addr[2];
 
 //alarm
 char alarm_counter = 0;
+char loop_in_alarm;
 boolean is_alarm_activated = false;
 boolean system_active;
 boolean is_active_entry_delay, is_active_exit_delay;
 char entry_loop_active;
 
 int entry_timer, exit_timer,alarm_timer;
-
+boolean alarmT1blocked =false, alarmT2blocked=false;
 //spinacky
 typedef struct
 {
@@ -268,16 +252,21 @@ typedef struct
 		int entry_delay;
 		int exit_delay;
 		int time_alarm;
+		int time_zone_activ;
+		int time_zone_wait;
+	    char loop_types[4];
+		char loop_activate;
 		//tel cisla,text sms povoleni atd...
-		TelNum telNum1;
-		TelNum telNum2;
-		TelNum telNum3;
+		TelNum telNums[3];
 		//spinacky
 		MinuteSpan minutespans[4];
 		//teploty
 		int teplota;
-		char hysterze;
-
+		char hystereze;
+		int alarmT1;
+		int alarmT2;
+		unsigned char aktivAlarmT1;//aktivace alarmu : 0 - pokles teploty pod nad nast.hodnotu, 1 - prekroceni nastavene hodoty
+		unsigned char aktivAlarmT2;
 
 }DataStruct;
 
@@ -285,7 +274,7 @@ typedef struct
 union
 {
 	DataStruct s;
-	unsigned char data[sizeof(DataStruct)];
+    char data[sizeof(DataStruct)];
 }u;
 #pragma endregion
 
