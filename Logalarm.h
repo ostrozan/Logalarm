@@ -40,26 +40,19 @@
 #define START_POINT 560
 
 #define RST 0x0000
-#define ON_I 0x10
-#define OFF_I 0x20
-#define ON_TEMP1 0x30
-#define OFF_TEMP1 0x40
-#define ON_TEMP2 0x50
-#define OFF_TEMP2 0x60
-#define ON_SWATCH 0x70
-#define OFF_SWATCH 0x80
-#define ON_SWCLOCK 0x90
-#define OFF_SWCLOCK 0xa0
-#define ON_SMS 0xb0
-#define OFF_SMS 0xc0
-#define ON_RNG 0xd0
-#define OFF_RNG 0xe0
-#define ON_MAN 0xf0
-#define OFF_MAN 0x100
-#define SEND_SMS 0x200
-#define RING 0x300
-#define RING_SMS 0x400
-#define GSM_QEST 0x500
+#define ALARM 0x10
+#define ALARM_ACT 0x20
+#define ALARM_DEACT 0x30
+#define ON_TEMP 0x40
+#define OFF_TEMP 0x50
+#define ON_SWCLOCK 0x60
+#define OFF_SWCLOCK 0x70
+#define ON_SMS 0x80
+#define OFF_SMS 0x90
+#define ON_RNG 0xa0
+#define OFF_RNG 0xb0
+#define SEND_SMS 0xc0
+#define GSM_QEST 0xd0
 
 #define CONTROLCOMBLUE
 #ifdef CONTROLCOMBLUE// opro komunikaci s programem pouzit bluetooth
@@ -183,6 +176,7 @@ typedef enum { empty, first, second }enumFlag;
 
 #pragma region promenne
 char rxBuffer[105];
+char txBuffer[80];
 char rozdelenyString[7][7];
 char divider[10];
 const unsigned char inpNmbs[4] = { A2,A3,A4,A5 };
@@ -190,16 +184,20 @@ const unsigned char outNmbs[6] = { 4,5,6,7,8,9 };
 int nmbOfSubstr;
 In inputs[4];
 Out outputs[6];
+Out gsmOut;
 int outTimers[6];
 enumFlag whichTime[6];
 boolean outTimersFlg[6];
 boolean recMsg = false;
 
 String gsmSignal ="0";
-int rxBufferIndex;
+char rxBufferIndex;
+char txBufferIndex;
 int recChar;
 boolean sendDateTimeFlg;
 boolean sendOutsFlg;
+
+boolean getGsmDt;//priznak pro nacteni datum cas z gsm
 volatile int minutes;
 int eepromPtr;
 //pro fci setdatetime
@@ -245,14 +243,16 @@ DeviceAddress addr[2];
 
 //alarm
 char alarm_counter = 0;
+char alarm_counter_zona = 0;//special pro typ zona
 char loop_in_alarm;
 boolean is_alarm_activated = false;
 boolean system_active;
 boolean is_active_entry_delay, is_active_exit_delay;
 char entry_loop_active;
 
-int entry_timer, exit_timer,alarm_timer;
-boolean alarmT1blocked =false, alarmT2blocked=false;
+int entry_timer, exit_timer,alarm_timer,zone_out_timer,zone_block_timer;
+boolean alarmT1HiBlocked =false, alarmT2HiBlocked=false, alarmT1LoBlocked = false, alarmT2LoBlocked = false;
+boolean zone_out_blocked = false;
 //spinacky
 typedef struct
 {
@@ -291,6 +291,8 @@ union
 	DataStruct s;
     char data[sizeof(DataStruct)];
 }u;
+
+boolean tick;
 #pragma endregion
 
 #endif
