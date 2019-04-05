@@ -231,6 +231,8 @@ char callingNumber;//index volajiciho cisla ze seznamu
 boolean measure_temp_flag;
 volatile int teploty_new[2];
 int teploty_old[2];
+
+boolean isDebug = false;
 #define ONE_WIRE_BUS A1
 #define TEMPERATURE_PRECISION 9 // Lower resolution
 

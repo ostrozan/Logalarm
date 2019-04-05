@@ -40,7 +40,7 @@ void setup ()
 	pinMode (SPIN_HOD, OUTPUT);
 	pinMode (ZONA, OUTPUT);
 	pinMode (TERMOSTAT, OUTPUT);
-	pinMode (30, OUTPUT); // Set TX LED as an output
+	pinMode (17, OUTPUT); // Set RX LED as an output
 	//outputs
 
 	//DS18B20
@@ -83,7 +83,7 @@ void loop ()
 	if (sendDateTimeFlg)
 	{
 
-		digitalWrite (30, tick ? HIGH : LOW);
+		digitalWrite (17, tick ? HIGH : LOW);
 		SendDateTime ();
 
 	}
@@ -91,7 +91,7 @@ void loop ()
 	if (getGsmDt)
 	{
 		getGsmDt = false;
-		COMGSM.print ("AT+CCLK?\n\r");
+		//COMGSM.print ("AT+CCLK?\n\r");
 
 	}
 	//mereni teplot
@@ -118,7 +118,7 @@ void loop ()
 		if (LOOP_ACT_LO)is_loop_break = ~is_loop_break;//primy vstup bez optoclenu
 		if (is_loop_break)//aktivovana smycka?
 		{
-			//Serial.print ("loop"); Serial.println (i, 10);
+			if (isDebug) { Serial.print ("loop"); Serial.println (i, 10); }
 			if (system_active)//aktivni alarm?
 			{
 				switch (u.s.loop_types[i])
@@ -163,7 +163,8 @@ void TestActivity ()
 		{
 			tmrButt = 0;
 			pushButton = true;
-			Serial.println ("push");
+			if (isDebug)Serial.print ("push");
+			//Serial.println ();
 			//while (digitalRead (LOCK));
 		}
 
@@ -182,7 +183,8 @@ void TestActivity ()
 
 		else if (system_active)
 		{
-			Serial.println ("disarm");
+			//Serial.println ();
+			if (isDebug)Serial.print ("disarm");
 			digitalWrite (AKTIV, LOW);
 			system_active = false;
 			is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
@@ -201,7 +203,7 @@ boolean EntryTimeout ()
 {
 	if (!is_active_entry_delay)
 	{
-		Serial.println ("active entry");
+		if (isDebug)Serial.println ("active entry");
 		is_active_entry_delay = true;
 		entry_timer = u.s.entry_delay;
 	}
@@ -218,7 +220,7 @@ boolean ExitTimeout ()
 	}
 	else if (exit_timer == 0)
 	{
-		Serial.println ("arm");
+		if (isDebug)Serial.println ("arm");
 		digitalWrite (AKTIV, HIGH);
 		is_active_exit_delay = false;//shod priznak odpocitavani odchodu
 		return true;//je aktivni odpocitavani odchodu a uplyunl nastaveny cas?
@@ -229,10 +231,6 @@ boolean ExitTimeout ()
 
 void Alarm (char loop_num ,char loop_typ)
 {
-
-
-	//Serial.println ("prealarm");
-
 	if (!is_alarm_activated)
 	{
 		for (int i = 0; i < 3; i++)
@@ -248,9 +246,9 @@ void Alarm (char loop_num ,char loop_typ)
 			{
 				loop_in_alarm = loop_num;
 				alarm_counter_zona++;
-				Serial.print ("alarm");
+				if (isDebug){Serial.print ("alarm");
 				Serial.print (alarm_counter, 10);
-				Serial.println (loop_num, 10);
+				Serial.println (loop_num, 10);}
 				is_alarm_activated = true;
 				digitalWrite (SIR, HIGH);//zapni sirenu
 				digitalWrite (ZONA, HIGH);//zapni vystup zona(svetlo ?)
@@ -264,9 +262,11 @@ void Alarm (char loop_num ,char loop_typ)
 		{
 			loop_in_alarm = loop_num;
 			alarm_counter++;
-			Serial.print ("alarm");
-			Serial.print (alarm_counter, 10);
-			Serial.println (loop_num, 10);
+			if (isDebug) {
+				Serial.print ("alarm");
+				Serial.print (alarm_counter, 10);
+				Serial.println (loop_num, 10);
+			}
 			is_alarm_activated = true;
 			digitalWrite (SIR, HIGH);//zapni sirenu
 			alarm_timer = u.s.time_alarm;//nastav casovac sireny
@@ -282,7 +282,7 @@ void GsmAlarm ()
 	//pokud neceka zadna sms na odeslani
 	if (!u.s.telNums[0].is_waiting_to_send_sms && !u.s.telNums[1].is_waiting_to_send_sms && !u.s.telNums[2].is_waiting_to_send_sms)
 	{
-		//Serial.println ("gsmalarm");
+		//if (isDebug)Serial.println ("gsmalarm");
 		//prozvoneni
 		for (int i = 0; i < 3; i++)
 		{
@@ -326,7 +326,7 @@ void TimerTick ()
 	{
 		ts.sec = 0;
 		minutes = (ts.hour * 60) + ts.min;
-		Serial.println (minutes, 10);
+		if (isDebug)Serial.println (minutes, 10);
 		if (++ts.min > 59)
 		{
            ts.min = 0;
@@ -354,7 +354,7 @@ void TimerTick ()
 			blockSetOff = false;
 			digitalWrite (SPIN_HOD, HIGH);
 			SaveEvent (ON_SWCLOCK, 0);
-			Serial.println ("swckOn");
+			if (isDebug)Serial.println ("swckOn");
 		}
 		if (minutes == u.s.minutespans[i].stopTime && blockSetOff == false)
 		{
@@ -362,7 +362,7 @@ void TimerTick ()
 			blockSetOn = false;
 			digitalWrite (SPIN_HOD, LOW);
 			SaveEvent (OFF_SWCLOCK, 0);
-			Serial.println ("swckOff");
+			if (isDebug)Serial.println ("swckOff");
 		}
 	}
 	static char temp_timer = 10;
@@ -375,21 +375,21 @@ void TimerTick ()
 	if (exit_timer)
 	{
 		digitalWrite (AKTIV, tick ? HIGH : LOW);
-		Serial.println (exit_timer, 10);
+		if (isDebug)Serial.println (exit_timer, 10);
 		if (--exit_timer == 0)
 		{
-			Serial.println ("odchod docasovan");
+			if (isDebug)Serial.println ("odchod docasovan");
 			SaveEvent (ALARM_ACT, 0);
 		}
 	}
 
 	if (entry_timer)
 	{
-		Serial.println (entry_timer, 10);
+		if (isDebug)Serial.println (entry_timer, 10);
 		if (--entry_timer == 0)
 		{
 			//	is_active_entry_delay = false;
-			Serial.println ("prichod docasovan");
+			if (isDebug)Serial.println ("prichod docasovan");
 
 		}
 	}
@@ -400,7 +400,7 @@ void TimerTick ()
 		{
 			is_alarm_activated = false;
 			digitalWrite (SIR, LOW);//vypni sirenu
-			Serial.println ("sirena off");
+			if (isDebug)Serial.println ("sirena off");
 		}
 	}
 
@@ -419,7 +419,7 @@ void TimerTick ()
 	if (casProzvaneni > 0)
 	{
 		Serial.print ("ring");
-		Serial.println (casProzvaneni, 10);
+		if (isDebug)Serial.println (casProzvaneni, 10);
 		casProzvaneni--;
 		if (casProzvaneni == 5)
 		{
@@ -438,8 +438,8 @@ void TimerTick ()
 
 	if (casZpozdeniSms)
 	{
-		Serial.print ("sms");
-		Serial.println (casZpozdeniSms, 10);
+		if (isDebug){Serial.print ("sms");
+		Serial.println (casZpozdeniSms, 10);}
 		casZpozdeniSms--;
 		//	//COMDEBUG.println (casZpozdeniSms, 10);
 			//if (--casZpozdeniSms == 0)SendLocalSms (currCallingInput);//
@@ -531,177 +531,179 @@ void GetSerialData ()
 		rxBuffer[rxBufferIndex] = (char)recChar;
 		if (rxBuffer[rxBufferIndex - 1] == 0x0d && recChar == 0x0a)
 		{
-			//COMDEBUG.println ("recmsg");
 			rxBufferIndex = 0;
 			recMsg = true;
-			//Serial.println ("OKrec");
+			Serial.println ("OKrec");
 			break;
 		}
 		rxBufferIndex++;
 	}
 
-	if (rxBuffer[0] == 'E')
-	{
-		VypisPametUdalosti ();
-	}
-	if (rxBuffer[0] == 'C')
-	{
-		ClearEventList ();
-	}
-	if (rxBuffer[0] == 'W')
-	{
-		//memcpy (u.data, &rxBuffer[1], sizeof (u));
 
-		char pom[18];
-		memcpy (&u.s.entry_delay, &rxBuffer[1], 2);
-		memcpy (pom, &u.s.entry_delay, 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.exit_delay, &rxBuffer[3], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.time_alarm, &rxBuffer[5], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.time_zone_activ, &rxBuffer[7], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.time_zone_wait, &rxBuffer[9], 2);
-		//Serial.write (pom, 2);
-		memcpy (u.s.loop_types, &rxBuffer[11], 4);
-		memcpy (&u.s.loop_activate, &rxBuffer[12], 1);
-
-		//tel 1
-		memcpy (u.s.telNums[0].number, &rxBuffer[16], 10);
-		memcpy (&u.s.telNums[0].is_sms_control, &rxBuffer[26], 1);
-		memcpy (&u.s.telNums[0].is_ring_control, &rxBuffer[27], 1);
-		memcpy (&u.s.telNums[0].send_sms, &rxBuffer[28], 1);
-		memcpy (&u.s.telNums[0].ring, &rxBuffer[29], 1);
-		//tel 2
-		memcpy (u.s.telNums[1].number, &rxBuffer[32], 10);
-		memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[42], 1);
-		memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[43], 1);
-		memcpy (&u.s.telNums[1].send_sms, &rxBuffer[44], 1);
-		memcpy (&u.s.telNums[1].ring, &rxBuffer[45], 1);
-		//tel 3
-		memcpy (u.s.telNums[2].number, &rxBuffer[48], 10);
-		memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[58], 1);
-		memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[59], 1);
-		memcpy (&u.s.telNums[2].send_sms, &rxBuffer[60], 1);
-		memcpy (&u.s.telNums[2].ring, &rxBuffer[61], 1);
-		//spinacky
-		memcpy (u.s.minutespans, &rxBuffer[64], 16);
-		//Serial.write (pom, 16);
-		//teploty
-		memcpy (&u.s.teplota, &rxBuffer[80], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.hystereze, &rxBuffer[82], 1);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.alarmT1, &rxBuffer[83], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.alarmT2, &rxBuffer[85], 2);
-		//Serial.write (pom, 2);
-		memcpy (&u.s.aktivAlarmT1, &rxBuffer[87], 1);
-		memcpy (&u.s.aktivAlarmT2, &rxBuffer[88], 1);
-		Serial.println ("ack");
-		EEPROM.put (0, u.data);
+	switch (rxBuffer[0])
+	{
+	default:
+		break;
+	case 'D': isDebug = (rxBuffer[1] == 'S') ? true : false; break;
+	case 'E': VypisPametUdalosti (); break;
+	case 'C': ClearEventList (); break;
+	case 'W': WriteData (); break;
+	case 'R': ReadData (); break;
 	}
 
-	if (rxBuffer[0] == 'R')
-	{
-		//for (int i = 0; i < sizeof (u.data); i++)
-		//{
-		//	Serial.write (u.data[i]);
-		//}
-		String pomstr;
-		int pom;
-		Serial.print (u.s.entry_delay, 10);
-		//Serial.print (pom,2);		
-		Serial.write (' ');
-		Serial.print (u.s.exit_delay, 10);
-		//Serial.write (pom, 2);
-		Serial.print (' ');
-		Serial.print (u.s.time_alarm, 10);
-		//Serial.write (pom, 2);
-		Serial.write (' ');
-		Serial.print (u.s.time_zone_activ, 10);
-		//Serial.write (pom, 2);
-		Serial.write (' ');
-		Serial.print (u.s.time_zone_wait, 10);
-		//Serial.write (pom, 2);
-		Serial.print (' ');
-		Serial.print (u.s.loop_types[0], 10);
-		Serial.print (u.s.loop_types[1], 10);
-		Serial.print (u.s.loop_types[2], 10);
-		Serial.print (u.s.loop_types[3], 10);
-		Serial.print (' ');
-		Serial.print (u.s.loop_activate, 10);
-		Serial.print (' ');
-		//tel 1
-		//pom = atoi (u.s.telNums[0].number);
-		Serial.print (String (u.s.telNums[0].number));
-		Serial.print (' ');
-		Serial.print (u.s.telNums[0].is_sms_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[0].is_ring_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[0].send_sms, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[0].ring, 10);
-		Serial.print (' ');
-		//tel 2
+
+	//ClearRxBuffer ();
+}
+
+
+void ReadData ()
+{
+	String pomstr;
+	int pom;
+	Serial.print (u.s.entry_delay, 10);
+	//Serial.print (pom,2);		
+	Serial.write (' ');
+	Serial.print (u.s.exit_delay, 10);
+	//Serial.write (pom, 2);
+	Serial.print (' ');
+	Serial.print (u.s.time_alarm, 10);
+	//Serial.write (pom, 2);
+	Serial.write (' ');
+	Serial.print (u.s.time_zone_activ, 10);
+	//Serial.write (pom, 2);
+	Serial.write (' ');
+	Serial.print (u.s.time_zone_wait, 10);
+	//Serial.write (pom, 2);
+	Serial.print (' ');
+	Serial.print (u.s.loop_types[0], 10);
+	Serial.print (u.s.loop_types[1], 10);
+	Serial.print (u.s.loop_types[2], 10);
+	Serial.print (u.s.loop_types[3], 10);
+	Serial.print (' ');
+	Serial.print (u.s.loop_activate, 10);
+	Serial.print (' ');
+	//tel 1
+	//pom = atoi (u.s.telNums[0].number);
+	Serial.print (String (u.s.telNums[0].number));
+	Serial.print (' ');
+	Serial.print (u.s.telNums[0].is_sms_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[0].is_ring_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[0].send_sms, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[0].ring, 10);
+	Serial.print (' ');
+	//tel 2
 	//	pom = atoi (u.s.telNums[1].number);
-		Serial.print (String (u.s.telNums[1].number));
-		Serial.print (' ');
-		Serial.print (u.s.telNums[1].is_sms_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[1].is_ring_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[1].send_sms, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[1].ring, 10);
-		Serial.print (' ');
-		//tel 3
+	Serial.print (String (u.s.telNums[1].number));
+	Serial.print (' ');
+	Serial.print (u.s.telNums[1].is_sms_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[1].is_ring_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[1].send_sms, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[1].ring, 10);
+	Serial.print (' ');
+	//tel 3
 	//	pom = atoi (u.s.telNums[2].number);
-		Serial.print (String (u.s.telNums[2].number));
-		Serial.print (' ');
-		Serial.print (u.s.telNums[2].is_sms_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[2].is_ring_control, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[2].send_sms, 10);
-		Serial.print (' ');
-		Serial.print (u.s.telNums[2].ring, 10);
-		Serial.print (' ');
-		//spinacky
-		Serial.print (u.s.minutespans[0].startTime, 10);
-		Serial.print (':');
-		Serial.print (u.s.minutespans[0].stopTime, 10);
-		Serial.print ('/');
-		Serial.print (u.s.minutespans[1].startTime, 10);
-		Serial.print (':');
-		Serial.print (u.s.minutespans[1].stopTime, 10);
-		Serial.print ('/');
-		Serial.print (u.s.minutespans[2].startTime, 10);
-		Serial.print (':');
-		Serial.print (u.s.minutespans[2].stopTime, 10);
-		Serial.print ('/');
-		Serial.print (u.s.minutespans[3].startTime, 10);
-		Serial.print (':');
-		Serial.print (u.s.minutespans[3].stopTime, 10);
+	Serial.print (String (u.s.telNums[2].number));
+	Serial.print (' ');
+	Serial.print (u.s.telNums[2].is_sms_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[2].is_ring_control, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[2].send_sms, 10);
+	Serial.print (' ');
+	Serial.print (u.s.telNums[2].ring, 10);
+	Serial.print (' ');
+	//spinacky
+	Serial.print (u.s.minutespans[0].startTime, 10);
+	Serial.print (':');
+	Serial.print (u.s.minutespans[0].stopTime, 10);
+	Serial.print ('/');
+	Serial.print (u.s.minutespans[1].startTime, 10);
+	Serial.print (':');
+	Serial.print (u.s.minutespans[1].stopTime, 10);
+	Serial.print ('/');
+	Serial.print (u.s.minutespans[2].startTime, 10);
+	Serial.print (':');
+	Serial.print (u.s.minutespans[2].stopTime, 10);
+	Serial.print ('/');
+	Serial.print (u.s.minutespans[3].startTime, 10);
+	Serial.print (':');
+	Serial.print (u.s.minutespans[3].stopTime, 10);
 
-		Serial.print (' ');
-		//teploty
-		Serial.print (u.s.teplota, 10);
-		Serial.print (':');
-		Serial.print (u.s.hystereze, 10);
-		Serial.print (':');
-		Serial.print (u.s.alarmT1, 10);
-		Serial.print (':');
-		Serial.print (u.s.alarmT2, 10);
-		Serial.print (':');
-		Serial.print (u.s.aktivAlarmT1, 10);
-		Serial.print (':');
-		Serial.print (u.s.aktivAlarmT2, 10);
-		Serial.print (' ');
-		Serial.println ("data");
-	}
+	Serial.print (' ');
+	//teploty
+	Serial.print (u.s.teplota, 10);
+	Serial.print (':');
+	Serial.print (u.s.hystereze, 10);
+	Serial.print (':');
+	Serial.print (u.s.alarmT1, 10);
+	Serial.print (':');
+	Serial.print (u.s.alarmT2, 10);
+	Serial.print (':');
+	Serial.print (u.s.aktivAlarmT1, 10);
+	Serial.print (':');
+	Serial.print (u.s.aktivAlarmT2, 10);
+	Serial.print (' ');
+	Serial.println ("data");
+}
+void WriteData ()
+{
+	//memcpy (u.data, &rxBuffer[1], sizeof (u));
+
+	char pom[18];
+	memcpy (&u.s.entry_delay, &rxBuffer[1], 2);
+	memcpy (pom, &u.s.entry_delay, 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.exit_delay, &rxBuffer[3], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.time_alarm, &rxBuffer[5], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.time_zone_activ, &rxBuffer[7], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.time_zone_wait, &rxBuffer[9], 2);
+	//Serial.write (pom, 2);
+	memcpy (u.s.loop_types, &rxBuffer[11], 4);
+	memcpy (&u.s.loop_activate, &rxBuffer[12], 1);
+
+	//tel 1
+	memcpy (u.s.telNums[0].number, &rxBuffer[16], 10);
+	memcpy (&u.s.telNums[0].is_sms_control, &rxBuffer[26], 1);
+	memcpy (&u.s.telNums[0].is_ring_control, &rxBuffer[27], 1);
+	memcpy (&u.s.telNums[0].send_sms, &rxBuffer[28], 1);
+	memcpy (&u.s.telNums[0].ring, &rxBuffer[29], 1);
+	//tel 2
+	memcpy (u.s.telNums[1].number, &rxBuffer[32], 10);
+	memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[42], 1);
+	memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[43], 1);
+	memcpy (&u.s.telNums[1].send_sms, &rxBuffer[44], 1);
+	memcpy (&u.s.telNums[1].ring, &rxBuffer[45], 1);
+	//tel 3
+	memcpy (u.s.telNums[2].number, &rxBuffer[48], 10);
+	memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[58], 1);
+	memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[59], 1);
+	memcpy (&u.s.telNums[2].send_sms, &rxBuffer[60], 1);
+	memcpy (&u.s.telNums[2].ring, &rxBuffer[61], 1);
+	//spinacky
+	memcpy (u.s.minutespans, &rxBuffer[64], 16);
+	//Serial.write (pom, 16);
+	//teploty
+	memcpy (&u.s.teplota, &rxBuffer[80], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.hystereze, &rxBuffer[82], 1);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.alarmT1, &rxBuffer[83], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.alarmT2, &rxBuffer[85], 2);
+	//Serial.write (pom, 2);
+	memcpy (&u.s.aktivAlarmT1, &rxBuffer[87], 1);
+	memcpy (&u.s.aktivAlarmT2, &rxBuffer[88], 1);
+	Serial.println ("ack");
+	EEPROM.put (0, u.data);
 }
 boolean isSms = false;
 int rx_index;
@@ -728,7 +730,7 @@ void GsmReceive ()
 			}
 		    if (c == '\n')
 			{
-				if (isSms == true) {isSms = false; Serial.println ('#'); continue; }
+				if (isSms == true) {isSms = false; if (isDebug)Serial.println ('#'); continue; }
 				else isRec = true;
 			}
 			rxBuffer[rxBufferIndex++] = c;
@@ -738,20 +740,14 @@ void GsmReceive ()
 	
 	rxBufferIndex = 0;
 	_delay_ms (20);
-#ifdef DEBUG
-	COMDEBUG.println (gsm_string);
-#endif // DEBUG
 	gsm_string = String (rxBuffer);
-	//Serial.println (gsm_string);
+	if (isDebug)Serial.println (gsm_string);
 
-
-	//Serial.print (">>");
-	//Serial.println (start,10);
 	if (gsm_string.indexOf ("Q:") != -1)
 	{
-		Serial.println (">>Q");
+		//Serial.println (">>Q");
 		start = gsm_string.indexOf ("Q:");
-		start += 6;
+		start += 3;
 		end = start + 2;
 		gsmSignal = String (gsm_string).substring (start, end);
 		//COMDEBUG.println (gsmSignal);
@@ -759,22 +755,22 @@ void GsmReceive ()
 
 	else if (gsm_string.indexOf ("+420") != -1)
 	{
-		Serial.println (">>+");
+		//Serial.println (">>+");
 		start = gsm_string.indexOf ("+420");
 		telnmb = gsm_string.substring (start + 4, start + 13);
-		Serial.println (telnmb);
+		//Serial.println (telnmb);
 	}
 
 	if (gsm_string.indexOf ("T:") != -1)
 	{
-		Serial.println (">>T");
+		//Serial.println (">>T");
 			start = gsm_string.length () - 5;
 			String command = gsm_string.substring (start, start + 3);
-			Serial.print ("OK1");
-			Serial.println (gsm_string);
+			//Serial.print ("OK1");
+			//Serial.println (gsm_string);
 			char pom2[4];//pomocna pro prikaz
 						 command.toCharArray (pom2, 4);
-						 Serial.println (pom2);
+						 //Serial.println (pom2);
 			char nmbx = pom2[0];
 			if (pom2[0] == '?')
 			{
@@ -819,7 +815,7 @@ void GsmReceive ()
 
 	else if (gsm_string.indexOf ("RR") != -1 /*&& gsmData.isRinging*/)//no carrier
 	{
-		Serial.println ("nocarr");
+		if (isDebug)Serial.println ("nocarr");
 		gsmData.isRinging = false;
 		gsmData.isActivated = false;
 		//COMDEBUG.println (gsmData.isFound);
@@ -852,7 +848,7 @@ void GsmReceive ()
 
 	else if (telnmb.equals (String (u.s.telNums[0].number)))
 	{
-		Serial.println ("numOK");
+		//Serial.println ("numOK");
 		gsmData.isFound = true;
 
 	}
@@ -979,7 +975,7 @@ void VypisPametUdalosti ()
 		}
 		ptr--;
 	} while (ptr > pom_ptr);
-	Serial.println (">");
+	//Serial.println (">");
 	Timer1.start ();
 
 }
@@ -987,8 +983,8 @@ void VypisPametUdalosti ()
 void ChangeOutput (Out out, int ev)//cislo vystupu,cislo pinu,stav
 {
 	//outputs[out].state = state;
-	Serial.print (out.state ==  1 ? "on" : "off");
-	Serial.println (out.nmb,10);
+	if (isDebug){Serial.print (out.state ==  1 ? "on" : "off");
+	Serial.println (out.nmb,10);}
 	digitalWrite (out.nmb, out.state);//zapis stav na vystup
 	SaveEvent (ev, 0);
 	sendOutsFlg = true;
@@ -1009,16 +1005,20 @@ void SendDateTime ()
 	//Serial.println (cnt,10);
 	//cnt++;
 	//
-	//if (++cnt > 10)
-	//{
-	//	cnt = 0;
-	//	GSM.Signal ();
-	//}
+	if (isDebug)
+	{
+	if (++cnt > 10)
+	{
+		cnt = 0;
+		GSM.Signal ();
+	}
+	}
+
 
 	sendDateTimeFlg = false;
 	if (numberOfFDallasDevices > 0)CtiTeploty ();
 	sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
-	Serial.println ("dt>" + TSToString (ts) + '<' + pomstr + '<' + gsmSignal);
+	if(isDebug)Serial.println ("dt>" + TSToString (ts) + '<' + pomstr + '<' + gsmSignal);
 	delay (10);	
 }
 
@@ -1031,7 +1031,7 @@ void TempControl ()
 		blockTempOff = true;
 		digitalWrite (TERMOSTAT, LOW);
 		SaveEvent (OFF_TEMP, 0);
-		Serial.println ("tempOn");
+		if (isDebug)Serial.println ("tempOn");
 	}
 	else if (teploty_new[0] < u.s.teplota - u.s.hystereze && !blockTempOn)
 	{
@@ -1039,7 +1039,7 @@ void TempControl ()
 		blockTempOff = false;
 		digitalWrite (TERMOSTAT, HIGH);
 		SaveEvent (ON_TEMP, 0);
-		Serial.println ("tempOff");
+		if (isDebug)Serial.println ("tempOff");
 	}
 
 
@@ -1048,7 +1048,7 @@ void TempControl ()
 		alarmT1LoBlocked = false;
 		if (alarmT1HiBlocked == false && u.s.aktivAlarmT1 == 1)
 		{
-			Serial.println ("alarm T1 hi");
+			if (isDebug)Serial.println ("alarm T1 hi");
 			SaveEvent (ALARM, 5);
 			alarmT1HiBlocked = true;
 		}
@@ -1059,7 +1059,7 @@ void TempControl ()
 		alarmT1HiBlocked = false;
 		if (alarmT1LoBlocked == false && u.s.aktivAlarmT1 == 0)
 		{
-			Serial.println ("alarm T1 lo");
+			if (isDebug)Serial.println ("alarm T1 lo");
 			SaveEvent (ALARM, 5);
 			alarmT1LoBlocked = true;
 		}
@@ -1072,7 +1072,7 @@ void TempControl ()
 		alarmT2LoBlocked = false;
 		if (alarmT2HiBlocked == false && u.s.aktivAlarmT2 == 1)
 		{
-			Serial.println ("alarm T2 hi");
+			if (isDebug)Serial.println ("alarm T2 hi");
 			SaveEvent (ALARM, 6);
 			alarmT2HiBlocked = true;
 		}
@@ -1083,7 +1083,7 @@ void TempControl ()
 		alarmT2HiBlocked = false;
 		if (alarmT2LoBlocked == false && u.s.aktivAlarmT2 == 0)
 		{
-			Serial.println ("alarm T2 lo");
+			if (isDebug)Serial.println ("alarm T2 lo");
 			SaveEvent (ALARM, 6);
 			alarmT2LoBlocked = true;
 		}
