@@ -91,7 +91,7 @@ void loop ()
 	if (getGsmDt)
 	{
 		getGsmDt = false;
-		//COMGSM.print ("AT+CCLK?\n\r");
+		COMGSM.print ("AT+CCLK?\n\r");
 
 	}
 	//mereni teplot
@@ -709,7 +709,7 @@ boolean isSms = false;
 int rx_index;
 void GsmReceive ()
 {
-
+	Timer1.stop ();
 	boolean isRec = false;
 	String gsm_string;
 	char c;
@@ -853,6 +853,7 @@ void GsmReceive ()
 
 	}
 	ClearRxBuffer ();
+	Timer1.start ();
 }
 
 void SendStatus ()
@@ -1049,6 +1050,7 @@ void TempControl ()
 		if (alarmT1HiBlocked == false && u.s.aktivAlarmT1 == 1)
 		{
 			if (isDebug)Serial.println ("alarm T1 hi");
+			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT1 == 1 ? "prekrocena teplota 1": "pokles teplota 1");
 			SaveEvent (ALARM, 5);
 			alarmT1HiBlocked = true;
 		}
@@ -1060,6 +1062,7 @@ void TempControl ()
 		if (alarmT1LoBlocked == false && u.s.aktivAlarmT1 == 0)
 		{
 			if (isDebug)Serial.println ("alarm T1 lo");
+			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT2 == 1 ? "prekrocena teplota 2" : "pokles teplota 2");
 			SaveEvent (ALARM, 5);
 			alarmT1LoBlocked = true;
 		}
