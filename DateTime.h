@@ -19,7 +19,7 @@ class DateTime
 {
 public:
 
-	struct ts dateTimeStr;
+	 ts dateTimeStr;
 
 	DateTime ();
 	~DateTime ();

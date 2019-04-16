@@ -21,17 +21,11 @@
     <ClInclude Include="__vm\.Logalarm.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DateTime.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GsmModule.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DateTime.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GsmModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
