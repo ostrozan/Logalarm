@@ -53,6 +53,8 @@
 #define OFF_RNG 0xb0
 #define SEND_SMS 0xc0
 #define GSM_QEST 0xd0
+#define SYS_ZAP_GSM 0xe0
+#define SYS_VYP_GSM 0xf0
 
 #define CONTROLCOMBLUE
 #ifdef CONTROLCOMBLUE// opro komunikaci s programem pouzit bluetooth
@@ -166,6 +168,7 @@ typedef struct
 	boolean isRinging;
 	boolean isActivated;
 	boolean isFound;//bylo nalezeno spravne cislo
+	boolean isMonitorig;//odposlech pres mikrofon
 }GsmData;
 
 GsmData gsmData;
@@ -218,9 +221,10 @@ typedef struct
 	char ring;
 	char is_waiting_to_send_sms;
 	char is_waiting_to_calling;
+	char isMonitorig;//odposlech pres mikrofon
 }TelNum;
 
-
+char pocet_prozvoneni = 0;
 char casProzvaneni;//jak dlouho bude prozvanet
 int casBlokovaniSms;
 char casZpozdeniSms;//pri prozvoneni+ sms nutno pockat

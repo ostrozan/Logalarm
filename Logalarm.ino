@@ -66,6 +66,9 @@ void setup ()
 	//setup_watchdog (WDTO_30MS);
 	COMGSM.print ("AT+CCLK?\n\r");
 	delay (2000);
+
+	////////////test
+	u.s.telNums[0].isMonitorig = 1;
 }
 
 void loop ()
@@ -164,8 +167,6 @@ void TestActivity ()
 			tmrButt = 0;
 			pushButton = true;
 			if (isDebug)Serial.print ("push");
-			//Serial.println ();
-			//while (digitalRead (LOCK));
 		}
 
 	}
@@ -183,20 +184,38 @@ void TestActivity ()
 
 		else if (system_active)
 		{
-			//Serial.println ();
-			if (isDebug)Serial.print ("disarm");
-			digitalWrite (AKTIV, LOW);
-			system_active = false;
-			is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
-			entry_timer = 0;//vynuluj vstupni timer	
-			is_alarm_activated = false;//shod priznak aktivovaneho alarmu
-			digitalWrite (SIR, LOW);//vypni sirenu, pokud je zapla
-			alarm_timer = 0;//vynuluj casovac alarmu
-			alarm_counter = 0;//vynuluj pocitadlo alarmu
-			pushButton = false;
-			SaveEvent (ALARM_DEACT, 0);//uloz do pameti udalosti
+			Deactivate (ALARM_DEACT);
 		}
 	}
+}
+
+void Activate (char ev)
+{
+	if (isDebug)Serial.print ("arm");
+	digitalWrite (AKTIV, HIGH);
+	system_active = true;
+	is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
+	entry_timer = 0;//vynuluj vstupni timer	
+	is_alarm_activated = true;//nastav priznak aktivovaneho alarmu
+	pushButton = false;
+	SaveEvent (ev, 0);//uloz do pameti udalosti
+	if (ev == SYS_ZAP_GSM)SendStatus ();
+}
+
+void Deactivate (char ev)
+{
+	if (isDebug)Serial.print ("disarm");
+	digitalWrite (AKTIV, LOW);
+	system_active = false;
+	is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
+	entry_timer = 0;//vynuluj vstupni timer	
+	is_alarm_activated = false;//shod priznak aktivovaneho alarmu
+	digitalWrite (SIR, LOW);//vypni sirenu, pokud je zapla
+	alarm_timer = 0;//vynuluj casovac alarmu
+	alarm_counter = 0;//vynuluj pocitadlo alarmu
+	pushButton = false;
+	SaveEvent (ev, 0);//uloz do pameti udalosti
+	if (ev == SYS_VYP_GSM)SendStatus ();
 }
 
 boolean EntryTimeout ()
@@ -220,9 +239,7 @@ boolean ExitTimeout ()
 	}
 	else if (exit_timer == 0)
 	{
-		if (isDebug)Serial.println ("arm");
-		digitalWrite (AKTIV, HIGH);
-		is_active_exit_delay = false;//shod priznak odpocitavani odchodu
+		Activate (ALARM_ACT);
 		return true;//je aktivni odpocitavani odchodu a uplyunl nastaveny cas?
 
 	}
@@ -379,7 +396,7 @@ void TimerTick ()
 		if (--exit_timer == 0)
 		{
 			if (isDebug)Serial.println ("odchod docasovan");
-			SaveEvent (ALARM_ACT, 0);
+			//SaveEvent (ALARM_ACT, 0);
 		}
 	}
 
@@ -533,7 +550,7 @@ void GetSerialData ()
 		{
 			rxBufferIndex = 0;
 			recMsg = true;
-			Serial.println ("OKrec");
+			//Serial.println ("OKrec");
 			break;
 		}
 		rxBufferIndex++;
@@ -594,6 +611,9 @@ void ReadData ()
 	Serial.print (' ');
 	Serial.print (u.s.telNums[0].ring, 10);
 	Serial.print (' ');
+	Serial.print (u.s.telNums[0].isMonitorig, 10);
+	Serial.print (' ');
+
 	//tel 2
 	//	pom = atoi (u.s.telNums[1].number);
 	Serial.print (String (u.s.telNums[1].number));
@@ -676,32 +696,33 @@ void WriteData ()
 	memcpy (&u.s.telNums[0].is_ring_control, &rxBuffer[27], 1);
 	memcpy (&u.s.telNums[0].send_sms, &rxBuffer[28], 1);
 	memcpy (&u.s.telNums[0].ring, &rxBuffer[29], 1);
+	memcpy (&u.s.telNums[0].isMonitorig, &rxBuffer[30], 1);
 	//tel 2
-	memcpy (u.s.telNums[1].number, &rxBuffer[32], 10);
-	memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[42], 1);
-	memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[43], 1);
-	memcpy (&u.s.telNums[1].send_sms, &rxBuffer[44], 1);
-	memcpy (&u.s.telNums[1].ring, &rxBuffer[45], 1);
+	memcpy (u.s.telNums[1].number, &rxBuffer[33], 10);
+	memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[43], 1);
+	memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[44], 1);
+	memcpy (&u.s.telNums[1].send_sms, &rxBuffer[45], 1);
+	memcpy (&u.s.telNums[1].ring, &rxBuffer[46], 1);
 	//tel 3
-	memcpy (u.s.telNums[2].number, &rxBuffer[48], 10);
-	memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[58], 1);
-	memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[59], 1);
-	memcpy (&u.s.telNums[2].send_sms, &rxBuffer[60], 1);
-	memcpy (&u.s.telNums[2].ring, &rxBuffer[61], 1);
+	memcpy (u.s.telNums[2].number, &rxBuffer[49], 10);
+	memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[59], 1);
+	memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[60], 1);
+	memcpy (&u.s.telNums[2].send_sms, &rxBuffer[61], 1);
+	memcpy (&u.s.telNums[2].ring, &rxBuffer[62], 1);
 	//spinacky
-	memcpy (u.s.minutespans, &rxBuffer[64], 16);
+	memcpy (u.s.minutespans, &rxBuffer[65], 16);
 	//Serial.write (pom, 16);
 	//teploty
-	memcpy (&u.s.teplota, &rxBuffer[80], 2);
+	memcpy (&u.s.teplota, &rxBuffer[81], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.hystereze, &rxBuffer[82], 1);
+	memcpy (&u.s.hystereze, &rxBuffer[83], 1);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.alarmT1, &rxBuffer[83], 2);
+	memcpy (&u.s.alarmT1, &rxBuffer[84], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.alarmT2, &rxBuffer[85], 2);
+	memcpy (&u.s.alarmT2, &rxBuffer[86], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.aktivAlarmT1, &rxBuffer[87], 1);
-	memcpy (&u.s.aktivAlarmT2, &rxBuffer[88], 1);
+	memcpy (&u.s.aktivAlarmT1, &rxBuffer[88], 1);
+	memcpy (&u.s.aktivAlarmT2, &rxBuffer[89], 1);
 	Serial.println ("ack");
 	EEPROM.put (0, u.data);
 }
@@ -782,6 +803,10 @@ void GsmReceive ()
 				gsmOut.state = (pom2[2] == 'n') ? 1 : 0;
 				ChangeOutput (gsmOut, (pom2[2] == 'n') ? ON_SMS : OFF_SMS);
 			}
+			else if (pom2[1] == 'a' || pom2[1] == 'y')
+			{
+				pom2[1] == 'a' ? Activate (SYS_ZAP_GSM) : Deactivate (SYS_VYP_GSM);
+			}
 		
 	}
 
@@ -827,7 +852,12 @@ void GsmReceive ()
 			SendStatus ();
 		}
 	}
-	else if (gsm_string.indexOf ("RING") != -1 && gsmData.isRinging == false) gsmData.isRinging = true;
+	else if (gsm_string.indexOf ("RING") != -1 )
+	{
+		if(gsmData.isRinging == false)gsmData.isRinging = true;
+		pocet_prozvoneni++;
+
+	}
 
 
 	if (gsmData.isRinging && !gsmData.isActivated )
@@ -850,6 +880,11 @@ void GsmReceive ()
 	{
 		//Serial.println ("numOK");
 		gsmData.isFound = true;
+		if (u.s.telNums[0].isMonitorig && pocet_prozvoneni > 4)
+		{
+			pocet_prozvoneni = 0;
+			GSM.Accept ();//zvedni hovor
+		}
 
 	}
 	ClearRxBuffer ();
@@ -1050,7 +1085,7 @@ void TempControl ()
 		if (alarmT1HiBlocked == false && u.s.aktivAlarmT1 == 1)
 		{
 			if (isDebug)Serial.println ("alarm T1 hi");
-			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT1 == 1 ? "prekrocena teplota 1": "pokles teplota 1");
+			//GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT1 == 1 ? "prekrocena teplota 1": "pokles teplota 1");
 			SaveEvent (ALARM, 5);
 			alarmT1HiBlocked = true;
 		}
@@ -1062,7 +1097,7 @@ void TempControl ()
 		if (alarmT1LoBlocked == false && u.s.aktivAlarmT1 == 0)
 		{
 			if (isDebug)Serial.println ("alarm T1 lo");
-			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT2 == 1 ? "prekrocena teplota 2" : "pokles teplota 2");
+			//GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT2 == 1 ? "prekrocena teplota 2" : "pokles teplota 2");
 			SaveEvent (ALARM, 5);
 			alarmT1LoBlocked = true;
 		}

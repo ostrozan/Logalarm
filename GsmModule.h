@@ -23,6 +23,7 @@ public:
 	bool Sms (String number, String message);
 	bool Sms (String number, char* message);
 	bool HangOut ();
+	bool Accept ();
 	String Signal ();
 	String Operator ();
 
