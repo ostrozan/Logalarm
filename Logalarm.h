@@ -166,6 +166,7 @@ typedef struct
 	boolean isRinging;
 	boolean isActivated;
 	boolean isFound;//bylo nalezeno spravne cislo
+	boolean isMonitorig;//odposlech pres mikrofon
 }GsmData;
 
 GsmData gsmData;
@@ -218,6 +219,7 @@ typedef struct
 	char ring;
 	char is_waiting_to_send_sms;
 	char is_waiting_to_calling;
+	char isMonitorig;//odposlech pres mikrofon
 }TelNum;
 
 

@@ -70,6 +70,11 @@ bool GsmModule::HangOut ()
 	//return GsmAck ("OK");
 }
 
+bool GsmModule::Accept ()
+{
+	COMGSM.print ("ATA\r\n");
+}
+
 String GsmModule::Signal ()
 {
 	COMGSM.print ("AT+CSQ\r\n");

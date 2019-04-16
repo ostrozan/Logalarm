@@ -66,6 +66,9 @@ void setup ()
 	//setup_watchdog (WDTO_30MS);
 	COMGSM.print ("AT+CCLK?\n\r");
 	delay (2000);
+
+	////////////test
+	u.s.telNums[0].isMonitorig = 1;
 }
 
 void loop ()
@@ -594,6 +597,9 @@ void ReadData ()
 	Serial.print (' ');
 	Serial.print (u.s.telNums[0].ring, 10);
 	Serial.print (' ');
+	Serial.print (u.s.telNums[0].isMonitorig, 10);
+	Serial.print (' ');
+
 	//tel 2
 	//	pom = atoi (u.s.telNums[1].number);
 	Serial.print (String (u.s.telNums[1].number));
@@ -676,32 +682,33 @@ void WriteData ()
 	memcpy (&u.s.telNums[0].is_ring_control, &rxBuffer[27], 1);
 	memcpy (&u.s.telNums[0].send_sms, &rxBuffer[28], 1);
 	memcpy (&u.s.telNums[0].ring, &rxBuffer[29], 1);
+	memcpy (&u.s.telNums[0].isMonitorig, &rxBuffer[30], 1);
 	//tel 2
-	memcpy (u.s.telNums[1].number, &rxBuffer[32], 10);
-	memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[42], 1);
-	memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[43], 1);
-	memcpy (&u.s.telNums[1].send_sms, &rxBuffer[44], 1);
-	memcpy (&u.s.telNums[1].ring, &rxBuffer[45], 1);
+	memcpy (u.s.telNums[1].number, &rxBuffer[33], 10);
+	memcpy (&u.s.telNums[1].is_sms_control, &rxBuffer[43], 1);
+	memcpy (&u.s.telNums[1].is_ring_control, &rxBuffer[44], 1);
+	memcpy (&u.s.telNums[1].send_sms, &rxBuffer[45], 1);
+	memcpy (&u.s.telNums[1].ring, &rxBuffer[46], 1);
 	//tel 3
-	memcpy (u.s.telNums[2].number, &rxBuffer[48], 10);
-	memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[58], 1);
-	memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[59], 1);
-	memcpy (&u.s.telNums[2].send_sms, &rxBuffer[60], 1);
-	memcpy (&u.s.telNums[2].ring, &rxBuffer[61], 1);
+	memcpy (u.s.telNums[2].number, &rxBuffer[49], 10);
+	memcpy (&u.s.telNums[2].is_sms_control, &rxBuffer[59], 1);
+	memcpy (&u.s.telNums[2].is_ring_control, &rxBuffer[60], 1);
+	memcpy (&u.s.telNums[2].send_sms, &rxBuffer[61], 1);
+	memcpy (&u.s.telNums[2].ring, &rxBuffer[62], 1);
 	//spinacky
-	memcpy (u.s.minutespans, &rxBuffer[64], 16);
+	memcpy (u.s.minutespans, &rxBuffer[65], 16);
 	//Serial.write (pom, 16);
 	//teploty
-	memcpy (&u.s.teplota, &rxBuffer[80], 2);
+	memcpy (&u.s.teplota, &rxBuffer[81], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.hystereze, &rxBuffer[82], 1);
+	memcpy (&u.s.hystereze, &rxBuffer[83], 1);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.alarmT1, &rxBuffer[83], 2);
+	memcpy (&u.s.alarmT1, &rxBuffer[84], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.alarmT2, &rxBuffer[85], 2);
+	memcpy (&u.s.alarmT2, &rxBuffer[86], 2);
 	//Serial.write (pom, 2);
-	memcpy (&u.s.aktivAlarmT1, &rxBuffer[87], 1);
-	memcpy (&u.s.aktivAlarmT2, &rxBuffer[88], 1);
+	memcpy (&u.s.aktivAlarmT1, &rxBuffer[88], 1);
+	memcpy (&u.s.aktivAlarmT2, &rxBuffer[89], 1);
 	Serial.println ("ack");
 	EEPROM.put (0, u.data);
 }
@@ -850,6 +857,7 @@ void GsmReceive ()
 	{
 		//Serial.println ("numOK");
 		gsmData.isFound = true;
+		if (u.s.telNums[0].isMonitorig)GSM.Accept ();
 
 	}
 	ClearRxBuffer ();
@@ -1050,7 +1058,7 @@ void TempControl ()
 		if (alarmT1HiBlocked == false && u.s.aktivAlarmT1 == 1)
 		{
 			if (isDebug)Serial.println ("alarm T1 hi");
-			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT1 == 1 ? "prekrocena teplota 1": "pokles teplota 1");
+			//GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT1 == 1 ? "prekrocena teplota 1": "pokles teplota 1");
 			SaveEvent (ALARM, 5);
 			alarmT1HiBlocked = true;
 		}
@@ -1062,7 +1070,7 @@ void TempControl ()
 		if (alarmT1LoBlocked == false && u.s.aktivAlarmT1 == 0)
 		{
 			if (isDebug)Serial.println ("alarm T1 lo");
-			GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT2 == 1 ? "prekrocena teplota 2" : "pokles teplota 2");
+			//GSM.Sms (u.s.telNums[0].number, u.s.aktivAlarmT2 == 1 ? "prekrocena teplota 2" : "pokles teplota 2");
 			SaveEvent (ALARM, 5);
 			alarmT1LoBlocked = true;
 		}
