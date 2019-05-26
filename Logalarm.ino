@@ -1,16 +1,16 @@
 //
-//#include <watchdogHandler.h>
-//#include <avr\wdt.h>
+#include <watchdogHandler.h>
+#include <avr\wdt.h>
 #include <EEPROM.h>
 #include "GsmModule.h"
 #include "Logalarm.h"
-//#include "DateTime.h"
+#include "DateTime.h"
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire (ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors (&oneWire);
-//DateTime dateTime;
+DateTime dateTime;
 GsmModule GSM;
 boolean firstLoop = true;
 void setup ()
@@ -56,24 +56,25 @@ void setup ()
 		// set the resolution to TEMPERATURE_PRECISION bit (Each Dallas/Maxim device is capable of several different resolutions)
 		sensors.setResolution (tempDeviceAddress, TEMPERATURE_PRECISION);
 	}
-	//dateTime.Init ();
+	dateTime.Init ();
 	Timer1.initialize ();
 	Timer1.attachInterrupt (TimerTick);
 	EEPROM.get (0, u.data);
 	gsmData.outNmb = GSM_OUT;
 	gsmOut.nmb = GSM_OUT;
-	//setup_watchdog (WDTO_30MS);
+	setup_watchdog (WDTO_500MS);
 	COMGSM.print ("AT+CCLK?\n\r");
 	delay (2000);
 
 	////////////test
 	is_zone_out_blocked = false;
+	Serial.println ("rst");
 	SaveEvent (RST, 0);
 }
 
 void loop ()
 {
-
+	wdt_reset ();
 
 	//wdt_reset ();
 	//komunikace prijem GSM
@@ -86,7 +87,7 @@ void loop ()
 	if (sendDateTimeFlg)
 	{
 
-		digitalWrite (17, tick ? HIGH : LOW);
+		/*digitalWrite (17, tick ? HIGH : LOW);*/
 		SendDateTime ();
 
 	}
@@ -354,12 +355,12 @@ void TimerTick ()
 {
 	static  boolean blockSetOn, blockSetOff;
 	tick = !tick;
-	if (++ts.sec > 59)
-	{
-		getGsmDt = true;
-		ts.sec = 0;
-		minutes = (ts.hour * 60) + ts.min;
-		if (isDebug)Serial.println (minutes, 10);
+	//if (++ts.sec > 59)
+	//{
+	//	getGsmDt = true;
+	//	ts.sec = 0;
+	//	minutes = (ts.hour * 60) + ts.min;
+	//	if (isDebug)Serial.println (minutes, 10);
 		/*if (++ts.min > 59)
 		{
 		   ts.min = 0;
@@ -370,7 +371,7 @@ void TimerTick ()
 		   }
 		}*/
 
-	}
+		//}
 	sendDateTimeFlg = true;
 	//tick = !tick;
 	//digitalWrite (ZONA,tick? HIGH : LOW);
@@ -587,12 +588,44 @@ void GetSerialData ()
 	case 'C': ClearEventList (); break;
 	case 'W': WriteData (); break;
 	case 'R': ReadData (); break;
+	case 'T': SetActTime (rxBuffer); break;
 	}
 
 
 	//ClearRxBuffer ();
 }
 
+void SetActTime (char* src)
+{
+	ts pomTs;
+	int i = 0, idxs[10], idx = 0;
+	nmbOfSubstr = 0;
+	while (*src)
+	{
+		if (*src == '#')
+		{
+			divider[idx] = i;
+			idx++;
+			nmbOfSubstr++;
+		}
+		i++;
+		src++;
+	}
+
+	for (char j = 0; j < nmbOfSubstr - 1; j++)
+	{
+		memcpy (rozdelenyString[j], &rxBuffer[divider[j] + 1], divider[j + 1] - divider[j] - 1);
+		rozdelenyString[j][divider[i + 1] - divider[i] - 1] = 0;
+	}
+	pomTs.mday = atoi (rozdelenyString[0]);
+	pomTs.mon = atoi (rozdelenyString[1]);
+	pomTs.year = atoi (rozdelenyString[2]);
+	pomTs.hour = atoi (rozdelenyString[3]);
+	pomTs.min = atoi (rozdelenyString[4]);
+	pomTs.sec = atoi (rozdelenyString[5]);
+	dateTime.SetDateTime (pomTs);
+
+}
 
 void ReadData ()
 {
@@ -837,31 +870,32 @@ void GsmReceive ()
 
 
 
-	//DATE TIME
-	else if (gsm_string.indexOf ("K:") != -1)//CCLK
-	{
-		//Serial.println (">>C");
-		start = gsm_string.indexOf ("K:");
-		//Serial.print ("index "); Serial.println (start, 10);
-		if (start != -1)
-		{
-			char c[3];
-			start -= 4;
-			memcpy (c, &gsm_string[start + 8], 3);
-			ts.year = atoi (c) + 2000;
-			memcpy (c, &gsm_string[start + 11], 3);
-			ts.mon = atoi (c);
-			memcpy (c, &gsm_string[start + 14], 3);
-			ts.mday = atoi (c);
-			memcpy (c, &gsm_string[start + 17], 3);
-			ts.hour = atoi (c);
-			memcpy (c, &gsm_string[start + 20], 3);
-			ts.min = atoi (c);
-			memcpy (c, &gsm_string[start + 23], 3);
-			ts.sec = atoi (c);
+	//DATE TIME - REM in this branch
+	//else if (gsm_string.indexOf ("K:") != -1)//CCLK
+	//{
+	//	ts pomTs;
+	//	//Serial.println (">>C");
+	//	start = gsm_string.indexOf ("K:");
+	//	//Serial.print ("index "); Serial.println (start, 10);
+	//	if (start != -1)
+	//	{
+	//		char c[3];
+	//		start -= 4;
+	//		memcpy (c, &gsm_string[start + 8], 3);
+	//		pomTs.year = atoi (c) + 2000;
+	//		memcpy (c, &gsm_string[start + 11], 3);
+	//		pomTs.mon = atoi (c);
+	//		memcpy (c, &gsm_string[start + 14], 3);
+	//		pomTs.mday = atoi (c);
+	//		memcpy (c, &gsm_string[start + 17], 3);
+	//		pomTs.hour = atoi (c);
+	//		memcpy (c, &gsm_string[start + 20], 3);
+	//		pomTs.min = atoi (c);
+	//		memcpy (c, &gsm_string[start + 23], 3);
+	//		pomTs.sec = atoi (c);
 
-		}
-	}
+	//	}
+	//}
 
 	else if (gsm_string.indexOf ("RR") != -1 /*&& gsmData.isRinging*/)//no carrier
 	{
@@ -963,12 +997,13 @@ void SendStatus ()
 
 void SaveEvent (int ev, char nmb_i_o)
 {
-	event.yy = ts.year - 2000;
-	event.mnt = ts.mon;
-	event.day = ts.mday;
-	event.hr = ts.hour;
-	event.min = ts.min;
-	event.ss = ts.sec;
+
+	event.yy = dateTime.dateTimeStr.year - 2000;
+	event.mnt = dateTime.dateTimeStr.mon;
+	event.day = dateTime.dateTimeStr.mday;
+	event.hr = dateTime.dateTimeStr.hour;
+	event.min = dateTime.dateTimeStr.min;
+	event.ss = dateTime.dateTimeStr.sec;
 	event.evnt = ev | nmb_i_o;
 	unsigned char ee_ptr_events;
 	EEPROM.get (EE_EVENT_POINTER, ee_ptr_events);
@@ -1058,14 +1093,14 @@ void ChangeOutput (Out out, int ev)//cislo vystupu,cislo pinu,stav
 	sendOutsFlg = true;
 }
 
-String TSToString (TS ts)
-{
-	char str[22];
-	sprintf (str, "%u.%u.%u  %02u:%02u:%02u", ts.mday, ts.mon, ts.year, ts.hour, ts.min, ts.sec);
-	return String (str);
-}
+//String TSToString (TS ts)
+//{
+//	char str[22];
+//	sprintf (str, "%u.%u.%u  %02u:%02u:%02u", ts.mday, ts.mon, ts.year, ts.hour, ts.min, ts.sec);
+//	return String (str);
+//}
 
-void SendDateTime ()
+void SendDateTimexx ()
 {
 	static char cnt = 0, cnt1 = 0;
 	char pomstr[10];
@@ -1073,6 +1108,7 @@ void SendDateTime ()
 	//Serial.println (cnt,10);
 	//cnt++;
 	//
+
 	if (isDebug)
 	{
 		if (++cnt > 10)
@@ -1086,10 +1122,33 @@ void SendDateTime ()
 	sendDateTimeFlg = false;
 	if (numberOfFDallasDevices > 0)CtiTeploty ();
 	sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
-	if (isDebug)Serial.println ("dt>" + TSToString (ts) + '<' + pomstr + '<' + gsmSignal);
+	if (isDebug)Serial.println ("dt>" + dateTime.ToString () + '<' + pomstr + '<' + gsmSignal);
 	delay (10);
 }
+void SendDateTime ()
+{
+	static char cnt = 0;
+	char pomstr[10];
+	sendDateTimeFlg = false;
+	dateTime.GetDateTime ();
+	if (dateTime.dateTimeStr.sec == 0)minutes = dateTime.GetMinutes ();
+	if (numberOfFDallasDevices > 0)CtiTeploty ();
+	//COMDEBUG.println ("tick");
+	if (isDebug)
+	{
+		if (++cnt > 30)
+		{
+			cnt = 0;
+			GSM.Signal ();
 
+		}
+
+		sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
+		Serial.println ("dt>" + dateTime.ToString () + '<' + pomstr + '<' + gsmSignal);
+		delay (10);
+
+	}
+}
 void TempControl ()
 {
 	static boolean blockTempOn, blockTempOff;
@@ -1174,11 +1233,14 @@ void ClearRxBuffer ()
 	}
 }
 
-//ISR (WDT_vect) {
-//
-//	//  Anything you use in here needs to be declared with "volatile" keyword
-//
-//	//  Track the passage of time.
-//	//setup ();
-//
-//}
+ISR (WDT_vect) {
+	volatile boolean tick1;
+	if (tick)tick1 = false;
+	else tick1 = true;
+	digitalWrite (17, tick1 ? HIGH : LOW);
+	//  Anything you use in here needs to be declared with "volatile" keyword
+
+	//  Track the passage of time.
+    setup ();
+
+}
