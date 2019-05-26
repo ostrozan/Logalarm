@@ -4,7 +4,7 @@
 #include <TimerOne.h>
 //#include <SPI.h>
 //#include "GsmModule.h"
-//#include "DateTime.h"
+#include "DateTime.h"
 //#include <AT24CX.h>
 #include "EEPROM.h"
 #include <DallasTemperature.h> 
@@ -71,22 +71,22 @@
 #define LOOP_ACT_LO u.s.loop_activate == '0'
 #define LOOP_ACT_HI u.s.loop_activate == '1'
 #pragma endregion
-typedef struct _TS {
-	uint8_t sec;         /* seconds */
-	uint8_t min;         /* minutes */
-	uint8_t hour;        /* hours */
-	uint8_t mday;        /* day of the month */
-	uint8_t mon;         /* month */
-	int16_t year;        /* year */
-	uint8_t wday;        /* day of the week */
-	uint8_t yday;        /* day in the year */
-	uint8_t isdst;       /* daylight saving time */
-	uint8_t year_s;      /* year in short notation*/
-#ifdef CONFIG_UNIXTIME
-	uint32_t unixtime;   /* seconds since 01.01.1970 00:00:00 UTC*/
-#endif
-}TS;
-TS ts;
+//typedef struct _TS {
+//	uint8_t sec;         /* seconds */
+//	uint8_t min;         /* minutes */
+//	uint8_t hour;        /* hours */
+//	uint8_t mday;        /* day of the month */
+//	uint8_t mon;         /* month */
+//	int16_t year;        /* year */
+//	uint8_t wday;        /* day of the week */
+//	uint8_t yday;        /* day in the year */
+//	uint8_t isdst;       /* daylight saving time */
+//	uint8_t year_s;      /* year in short notation*/
+//#ifdef CONFIG_UNIXTIME
+//	uint32_t unixtime;   /* seconds since 01.01.1970 00:00:00 UTC*/
+//#endif
+//}TS;
+//TS ts;
 #pragma region typedefs
 typedef struct
 {
