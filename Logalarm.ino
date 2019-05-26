@@ -1,22 +1,23 @@
 //
-#include <watchdogHandler.h>
-#include <avr\wdt.h>
+//#include <watchdogHandler.h>
+//#include <avr\wdt.h>
 #include <EEPROM.h>
 #include "GsmModule.h"
 #include "Logalarm.h"
-#include "DateTime.h"
+//#include "DateTime.h"
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire (ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors (&oneWire);
-DateTime dateTime;
+//DateTime dateTime;
 GsmModule GSM;
 boolean firstLoop = true;
 void setup ()
 {
 	Serial.begin (38400); delay (2000);
 	//while (!Serial);
+	digitalWrite (ZONA, HIGH);
 	COMGSM.begin (9600);
 	while (!COMGSM);
 	GSM.Init ();
@@ -26,7 +27,7 @@ void setup ()
 	alarm_loops[3] = { SM4 };
 
 	Spinacky.out_num = SPIN_HOD;
-
+	
 	//I/O setup
 	pinMode (LOCK, INPUT_PULLUP);
 	pinMode (SM1, INPUT_PULLUP);
@@ -56,25 +57,23 @@ void setup ()
 		// set the resolution to TEMPERATURE_PRECISION bit (Each Dallas/Maxim device is capable of several different resolutions)
 		sensors.setResolution (tempDeviceAddress, TEMPERATURE_PRECISION);
 	}
-	dateTime.Init ();
+	//dateTime.Init ();
 	Timer1.initialize ();
 	Timer1.attachInterrupt (TimerTick);
 	EEPROM.get (0, u.data);
 	gsmData.outNmb = GSM_OUT;
 	gsmOut.nmb = GSM_OUT;
-	setup_watchdog (WDTO_500MS);
+	//setup_watchdog (WDTO_30MS);
 	COMGSM.print ("AT+CCLK?\n\r");
 	delay (2000);
 
 	////////////test
-	is_zone_out_blocked = false;
-	Serial.println ("rst");
-	SaveEvent (RST, 0);
+	u.s.telNums[0].isMonitorig = 1;
 }
 
 void loop ()
 {
-	wdt_reset ();
+
 
 	//wdt_reset ();
 	//komunikace prijem GSM
@@ -87,7 +86,7 @@ void loop ()
 	if (sendDateTimeFlg)
 	{
 
-		/*digitalWrite (17, tick ? HIGH : LOW);*/
+		digitalWrite (17, tick ? HIGH : LOW);
 		SendDateTime ();
 
 	}
@@ -104,7 +103,7 @@ void loop ()
 		measure_temp_flag = false;
 		CtiTeploty ();
 	}
-	//kontroluj vstup pro aktivaci/deaktivaci
+    //kontroluj vstup pro aktivaci/deaktivaci
 	TestActivity ();
 
 	if (is_active_entry_delay && !is_alarm_activated)//je aktivovan prichodovy cas
@@ -112,7 +111,7 @@ void loop ()
 		if (EntryTimeout ())
 		{
 			is_active_entry_delay = false;
-			Alarm (entry_loop_active, del);
+			Alarm (entry_loop_active,del);
 		}
 	}
 
@@ -122,18 +121,16 @@ void loop ()
 		if (LOOP_ACT_LO)is_loop_break = ~is_loop_break;//primy vstup bez optoclenu
 		if (is_loop_break)//aktivovana smycka?
 		{
-			//if (isDebug) { Serial.print ("loop");}
+			if (isDebug) { Serial.print ("loop"); Serial.println (i, 10); }
 			if (system_active)//aktivni alarm?
 			{
-				//if (isDebug) { Serial.print (i, 10); Serial.println (u.s.loop_types[i], 10); }
-
 				switch (u.s.loop_types[i])
 				{
 				case no_use: break;//nic
 				case inst:if (!is_alarm_activated) Alarm (i, u.s.loop_types[i]); break;//alarm hned
 				case del: entry_loop_active = i; EntryTimeout (); break;//aktivuj prichodovy cas
 				case h24: if (!is_alarm_activated)Alarm (i, u.s.loop_types[i]); break;//alarm hned
-				case zona:if (!is_zone_out_blocked && !is_alarm_activated) Alarm (i, u.s.loop_types[i]);  break;
+				case zona:if (!zone_out_blocked) Alarm (i, u.s.loop_types[i]);  break;
 				}
 			}
 			else //neaktivni alarm
@@ -159,13 +156,13 @@ void TestActivity ()
 {
 
 	int state = digitalRead (LOCK);
-
+	
 
 	if (!state && !pushButton)
 	{
-		if (tmrButt == 0)tmrButt = millis ();
+		if (tmrButt == 0)tmrButt = millis (); 
 
-		else if (millis () > tmrButt + 1500)//stisk tlacitka 1,5 sec
+		else if (millis() > tmrButt + 1500)//stisk tlacitka 1,5 sec
 		{
 			tmrButt = 0;
 			pushButton = true;
@@ -192,45 +189,33 @@ void TestActivity ()
 	}
 }
 
-void Activate (int ev)
+void Activate (char ev)
 {
 	if (isDebug)Serial.print ("arm");
 	digitalWrite (AKTIV, HIGH);
 	system_active = true;
 	is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
 	entry_timer = 0;//vynuluj vstupni timer	
-	is_alarm_activated = false;//nastav priznak aktivovaneho alarmu
+	is_alarm_activated = true;//nastav priznak aktivovaneho alarmu
 	pushButton = false;
 	SaveEvent (ev, 0);//uloz do pameti udalosti
-	if (ev == SYS_ZAP_GSM)
-	{
-		SendStatus ();
-		if (isDebug)Serial.print ("arm send stat");
-	}
+	if (ev == SYS_ZAP_GSM)SendStatus ();
 }
 
-void Deactivate (int ev)
+void Deactivate (char ev)
 {
 	if (isDebug)Serial.print ("disarm");
 	digitalWrite (AKTIV, LOW);
 	system_active = false;
-	is_active_exit_delay = false;
 	is_active_entry_delay = false;//shod priznak vstupniho zpozdeni
 	entry_timer = 0;//vynuluj vstupni timer	
 	is_alarm_activated = false;//shod priznak aktivovaneho alarmu
 	digitalWrite (SIR, LOW);//vypni sirenu, pokud je zapla
 	alarm_timer = 0;//vynuluj casovac alarmu
 	alarm_counter = 0;//vynuluj pocitadlo alarmu
-	alarm_counter_zona = 0;//vynuluj pocitalo pro zonu
-
 	pushButton = false;
-	is_zone_out_blocked = false;
 	SaveEvent (ev, 0);//uloz do pameti udalosti
-	if (ev == SYS_VYP_GSM)
-	{
-		SendStatus ();
-		if (isDebug)Serial.print ("disarm send stat");
-	}
+	if (ev == SYS_VYP_GSM)SendStatus ();
 }
 
 boolean EntryTimeout ()
@@ -254,21 +239,21 @@ boolean ExitTimeout ()
 	}
 	else if (exit_timer == 0)
 	{
-
+		Activate (ALARM_ACT);
 		return true;//je aktivni odpocitavani odchodu a uplyunl nastaveny cas?
 
 	}
 	return false;
 }
 
-void Alarm (char loop_num, char loop_typ)
+void Alarm (char loop_num ,char loop_typ)
 {
 	if (!is_alarm_activated)
 	{
 		for (int i = 0; i < 3; i++)
 		{
 			if (u.s.telNums[i].ring && !u.s.telNums[i].is_waiting_to_calling)u.s.telNums[i].is_waiting_to_calling = true;
-			if (loop_typ != zona)if (u.s.telNums[i].send_sms && !u.s.telNums[i].is_waiting_to_send_sms)u.s.telNums[i].is_waiting_to_send_sms = true;
+			if(loop_typ != zona)if (u.s.telNums[i].send_sms && !u.s.telNums[i].is_waiting_to_send_sms)u.s.telNums[i].is_waiting_to_send_sms = true;
 		}
 
 
@@ -278,10 +263,9 @@ void Alarm (char loop_num, char loop_typ)
 			{
 				loop_in_alarm = loop_num;
 				alarm_counter_zona++;
-				if (isDebug) {
-					Serial.print ("alarm zona");
-					Serial.print (alarm_counter_zona, 10);
-				}
+				if (isDebug){Serial.print ("alarm");
+				Serial.print (alarm_counter, 10);
+				Serial.println (loop_num, 10);}
 				is_alarm_activated = true;
 				digitalWrite (SIR, HIGH);//zapni sirenu
 				digitalWrite (ZONA, HIGH);//zapni vystup zona(svetlo ?)
@@ -353,25 +337,24 @@ void GsmAlarm ()
 
 void TimerTick ()
 {
-	static  boolean blockSetOn, blockSetOff;
+	static  boolean blockSetOn, blockSetOff ;
 	tick = !tick;
-	//if (++ts.sec > 59)
-	//{
-	//	getGsmDt = true;
-	//	ts.sec = 0;
-	//	minutes = (ts.hour * 60) + ts.min;
-	//	if (isDebug)Serial.println (minutes, 10);
-		/*if (++ts.min > 59)
+	if (++ts.sec > 59)
+	{
+		ts.sec = 0;
+		minutes = (ts.hour * 60) + ts.min;
+		if (isDebug)Serial.println (minutes, 10);
+		if (++ts.min > 59)
 		{
-		   ts.min = 0;
+           ts.min = 0;
 		   getGsmDt = true;
 		   if (++ts.hour > 23)
 		   {
 			   ts.mday++;
 		   }
-		}*/
-
-	//}
+		}
+			
+	}
 	sendDateTimeFlg = true;
 	//tick = !tick;
 	//digitalWrite (ZONA,tick? HIGH : LOW);
@@ -413,7 +396,6 @@ void TimerTick ()
 		if (--exit_timer == 0)
 		{
 			if (isDebug)Serial.println ("odchod docasovan");
-			Activate (ALARM_ACT);
 			//SaveEvent (ALARM_ACT, 0);
 		}
 	}
@@ -445,13 +427,11 @@ void TimerTick ()
 		{
 			digitalWrite (ZONA, LOW);//vypni vystup zona
 			zone_block_timer = u.s.time_zone_wait;//blokuj zonu na nastaveny cas
-			is_zone_out_blocked = true;
+			zone_out_blocked = true;
 		}
 	}
 
-	if (zone_block_timer) {
-		Serial.println (zone_block_timer); if (--zone_block_timer == 0)is_zone_out_blocked = false;
-	}
+	if (zone_block_timer)if (--zone_block_timer == 0)zone_out_blocked = false;
 
 	if (casProzvaneni > 0)
 	{
@@ -475,10 +455,8 @@ void TimerTick ()
 
 	if (casZpozdeniSms)
 	{
-		if (isDebug) {
-			Serial.print ("sms");
-			Serial.println (casZpozdeniSms, 10);
-		}
+		if (isDebug){Serial.print ("sms");
+		Serial.println (casZpozdeniSms, 10);}
 		casZpozdeniSms--;
 		//	//COMDEBUG.println (casZpozdeniSms, 10);
 			//if (--casZpozdeniSms == 0)SendLocalSms (currCallingInput);//
@@ -588,44 +566,12 @@ void GetSerialData ()
 	case 'C': ClearEventList (); break;
 	case 'W': WriteData (); break;
 	case 'R': ReadData (); break;
-	case 'T': SetActTime (rxBuffer); break;
 	}
 
 
 	//ClearRxBuffer ();
 }
 
-void SetActTime (char* src)
-{
-	ts pomTs;
-	int i = 0, idxs[10], idx = 0;
-	nmbOfSubstr = 0;
-	while (*src)
-	{
-		if (*src == '#')
-		{
-			divider[idx] = i;
-			idx++;
-			nmbOfSubstr++;
-		}
-		i++;
-		src++;
-	}
-
-		for (char j = 0; j < nmbOfSubstr - 1; j++)
-		{
-			memcpy (rozdelenyString[j], &rxBuffer[divider[j] + 1], divider[j + 1] - divider[j] - 1);
-			rozdelenyString[j][divider[i + 1] - divider[i] - 1] = 0;
-		}
-		pomTs.mday = atoi (rozdelenyString[0]);
-		pomTs.mon = atoi (rozdelenyString[1]);
-		pomTs.year = atoi (rozdelenyString[2]);
-		pomTs.hour = atoi (rozdelenyString[3]);
-		pomTs.min = atoi (rozdelenyString[4]);
-		pomTs.sec = atoi (rozdelenyString[5]);
-		dateTime.SetDateTime (pomTs);
-	
-}
 
 void ReadData ()
 {
@@ -794,25 +740,25 @@ void GsmReceive ()
 	//else isSms = false;
 	while (isRec == false)
 	{
-
+		
 		if (COMGSM.available ())
 		{
 			c = (char)COMGSM.read ();
-
+			
 			if (c == 'M')
 			{
-				isSms = true;
+				isSms = true; 				
 			}
-			if (c == '\n')
+		    if (c == '\n')
 			{
-				if (isSms == true) { isSms = false; if (isDebug)Serial.println ('#'); continue; }
+				if (isSms == true) {isSms = false; if (isDebug)Serial.println ('#'); continue; }
 				else isRec = true;
 			}
 			rxBuffer[rxBufferIndex++] = c;
 			//Serial.print (c);
 		}
 	}
-
+	
 	rxBufferIndex = 0;
 	_delay_ms (20);
 	gsm_string = String (rxBuffer);
@@ -839,63 +785,58 @@ void GsmReceive ()
 	if (gsm_string.indexOf ("T:") != -1)
 	{
 		//Serial.println (">>T");
-		start = gsm_string.length () - 5;
-		String command = gsm_string.substring (start, start + 3);
-		//Serial.print ("OK1");
-		//Serial.println (gsm_string);
-		char pom2[4];//pomocna pro prikaz
-		command.toCharArray (pom2, 4);
-		//Serial.println (pom2);
-		char nmbx = pom2[0];
-		if (pom2[0] == '?')
-		{
-			SendStatus ();
-			SaveEvent (GSM_QEST, 0);
-		}
-		else if (pom2[2] == 'n' || pom2[2] == 'f')
-		{
-			if (u.s.telNums[0].is_sms_control)
+			start = gsm_string.length () - 5;
+			String command = gsm_string.substring (start, start + 3);
+			//Serial.print ("OK1");
+			//Serial.println (gsm_string);
+			char pom2[4];//pomocna pro prikaz
+						 command.toCharArray (pom2, 4);
+						 //Serial.println (pom2);
+			char nmbx = pom2[0];
+			if (pom2[0] == '?')
+			{
+				SendStatus ();
+				SaveEvent (GSM_QEST, 0);
+			}
+			else if (pom2[2] == 'n' || pom2[2] == 'f')
 			{
 				gsmOut.state = (pom2[2] == 'n') ? 1 : 0;
 				ChangeOutput (gsmOut, (pom2[2] == 'n') ? ON_SMS : OFF_SMS);
 			}
-
-		}
-		else if (pom2[1] == 'a' || pom2[1] == 'y')
-		{
-			pom2[1] == 'a' ? Activate (SYS_ZAP_GSM) : Deactivate (SYS_VYP_GSM);
-		}
-
+			else if (pom2[1] == 'a' || pom2[1] == 'y')
+			{
+				pom2[1] == 'a' ? Activate (SYS_ZAP_GSM) : Deactivate (SYS_VYP_GSM);
+			}
+		
 	}
 
 
 
-	//DATE TIME - REM in this branch
-	//else if (gsm_string.indexOf ("K:") != -1)//CCLK
-	//{
-	//	ts pomTs;
-	//	//Serial.println (">>C");
-	//	start = gsm_string.indexOf ("K:");
-	//	//Serial.print ("index "); Serial.println (start, 10);
-	//	if (start != -1)
-	//	{
-	//		char c[3];
-	//		start -= 4;
-	//		memcpy (c, &gsm_string[start + 8], 3);
-	//		pomTs.year = atoi (c) + 2000;
-	//		memcpy (c, &gsm_string[start + 11], 3);
-	//		pomTs.mon = atoi (c);
-	//		memcpy (c, &gsm_string[start + 14], 3);
-	//		pomTs.mday = atoi (c);
-	//		memcpy (c, &gsm_string[start + 17], 3);
-	//		pomTs.hour = atoi (c);
-	//		memcpy (c, &gsm_string[start + 20], 3);
-	//		pomTs.min = atoi (c);
-	//		memcpy (c, &gsm_string[start + 23], 3);
-	//		pomTs.sec = atoi (c);
+	//DATE TIME
+	else if (gsm_string.indexOf ("K:") != -1)//CCLK
+	{
+		//Serial.println (">>C");
+		start = gsm_string.indexOf ("K:");
+		//Serial.print ("index "); Serial.println (start, 10);
+		if (start != -1)
+		{
+			char c[3];
+			start -= 4;
+			 memcpy(c,&gsm_string[start + 8] ,3);
+			ts.year = atoi (c) + 2000;
+			memcpy (c, &gsm_string[start + 11], 3);
+			ts.mon = atoi (c);
+			memcpy (c, &gsm_string[start + 14], 3);
+			ts.mday = atoi (c);
+			memcpy (c, &gsm_string[start + 17], 3);
+			ts.hour = atoi (c);
+			memcpy (c, &gsm_string[start + 20], 3);
+			ts.min = atoi (c);
+			 memcpy(c,&gsm_string[start + 23] ,3);
+			ts.sec = atoi (c);
 
-	//	}
-	//}
+		}
+	}
 
 	else if (gsm_string.indexOf ("RR") != -1 /*&& gsmData.isRinging*/)//no carrier
 	{
@@ -911,29 +852,24 @@ void GsmReceive ()
 			SendStatus ();
 		}
 	}
-	else if (gsm_string.indexOf ("RING") != -1)
+	else if (gsm_string.indexOf ("RING") != -1 )
 	{
-		if (gsmData.isRinging == false)gsmData.isRinging = true;
+		if(gsmData.isRinging == false)gsmData.isRinging = true;
 		pocet_prozvoneni++;
 
 	}
 
 
-	if (gsmData.isRinging && !gsmData.isActivated)
+	if (gsmData.isRinging && !gsmData.isActivated )
 	{
 		if (telnmb.equals (String (u.s.telNums[0].number)))
 		{
-			//Serial.println ("ring2");
-			gsmData.isFound = true;
-			gsmData.isActivated = true;
-			if (u.s.telNums[0].is_ring_control)
-			{
-				if (gsmOut.state == HIGH)gsmOut.state = LOW;
-				else gsmOut.state = HIGH;
-				ChangeOutput (gsmOut, (gsmOut.state == HIGH) ? ON_RNG : OFF_RNG);
-			}
-
-
+		//Serial.println ("ring2");
+		gsmData.isFound = true;
+		gsmData.isActivated = true;
+		if (gsmOut.state == HIGH)gsmOut.state = LOW;
+		else gsmOut.state = HIGH;
+		ChangeOutput (gsmOut, (gsmOut.state == HIGH) ? ON_RNG : OFF_RNG);
 		}
 
 
@@ -961,7 +897,7 @@ void SendStatus ()
 	//COMDEBUG.println ("sms");
 	//vystupy
 	strncpy (txBuffer, "alarm ", 6);
-	strcat (txBuffer, (system_active == true) ? "zap\n" : "vyp\n");
+	strcat (txBuffer, (system_active == true)? "zap\n" : "vyp\n");
 	strcat (txBuffer, "re1 ");
 	if (outputs[0].state == HIGH)strcat (txBuffer, "zap\n");
 	else strcat (txBuffer, "vyp\n");
@@ -990,20 +926,19 @@ void SendStatus ()
 	sprintf (tepl2, "t2 = %2u,%1u", teploty_new[1] / 10, teploty_new[1] % 10);
 	strcat (txBuffer, tepl2);
 	strcat (txBuffer, "\0");
-	GSM.Sms (String (u.s.telNums[0].number), txBuffer);
+	GSM.Sms (String(u.s.telNums[0].number), txBuffer);
 	//Serial.println (txBuffer);
 	casBlokovaniSms = 15;
 }
 
 void SaveEvent (int ev, char nmb_i_o)
 {
-	
-	event.yy = dateTime.dateTimeStr.year - 2000;
-	event.mnt = dateTime.dateTimeStr.mon;
-	event.day = dateTime.dateTimeStr.mday;
-	event.hr = dateTime.dateTimeStr.hour;
-	event.min = dateTime.dateTimeStr.min;
-	event.ss = dateTime.dateTimeStr.sec;
+	event.yy = ts.year - 2000;
+	event.mnt = ts.mon;
+	event.day = ts.mday;
+	event.hr = ts.hour;
+	event.min = ts.min;
+	event.ss = ts.sec;
 	event.evnt = ev | nmb_i_o;
 	unsigned char ee_ptr_events;
 	EEPROM.get (EE_EVENT_POINTER, ee_ptr_events);
@@ -1076,7 +1011,7 @@ void VypisPametUdalosti ()
 		}
 		ptr--;
 	} while (ptr > pom_ptr);
-	Serial.println (">");
+	//Serial.println (">");
 	Timer1.start ();
 
 }
@@ -1084,71 +1019,45 @@ void VypisPametUdalosti ()
 void ChangeOutput (Out out, int ev)//cislo vystupu,cislo pinu,stav
 {
 	//outputs[out].state = state;
-	if (isDebug) {
-		Serial.print (out.state == 1 ? "on" : "off");
-		Serial.println (out.nmb, 10);
-	}
+	if (isDebug){Serial.print (out.state ==  1 ? "on" : "off");
+	Serial.println (out.nmb,10);}
 	digitalWrite (out.nmb, out.state);//zapis stav na vystup
 	SaveEvent (ev, 0);
 	sendOutsFlg = true;
 }
 
-//String TSToString (TS ts)
-//{
-//	char str[22];
-//	sprintf (str, "%u.%u.%u  %02u:%02u:%02u", ts.mday, ts.mon, ts.year, ts.hour, ts.min, ts.sec);
-//	return String (str);
-//}
-
-void SendDateTimexx ()
+String TSToString (TS ts)
 {
-	static char cnt = 0, cnt1 = 0;
+	char str[22];
+	sprintf (str, "%u.%u.%u  %02u:%02u:%02u", ts.mday, ts.mon, ts.year, ts.hour, ts.min, ts.sec);
+	return String (str);
+}
+
+void SendDateTime ()
+{
+	static char cnt = 0, cnt1 =0;
 	char pomstr[10];
 	//Serial.print ("cnt");
 	//Serial.println (cnt,10);
 	//cnt++;
 	//
-
 	if (isDebug)
 	{
-		if (++cnt > 10)
-		{
-			cnt = 0;
-			GSM.Signal ();
-		}
-	}
-
-
-	sendDateTimeFlg = false;
-	if (numberOfFDallasDevices > 0)CtiTeploty ();
-	sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
-	if (isDebug)Serial.println ("dt>" + dateTime.ToString () + '<' + pomstr + '<' + gsmSignal);
-	delay (10);
-}
-void SendDateTime ()
-{
-	static char cnt = 0;
-	char pomstr[10];
-	sendDateTimeFlg = false;
-	dateTime.GetDateTime ();
-	if (dateTime.dateTimeStr.sec == 0)minutes = dateTime.GetMinutes ();
-	if (numberOfFDallasDevices > 0)CtiTeploty ();
-	//COMDEBUG.println ("tick");
-	if (isDebug)
-	{
-	if (++cnt > 30)
+	if (++cnt > 10)
 	{
 		cnt = 0;
 		GSM.Signal ();
-
+	}
 	}
 
+
+	sendDateTimeFlg = false;
+	if (numberOfFDallasDevices > 0)CtiTeploty ();
 	sprintf (pomstr, "%2u,%1u %2u,%1u", teploty_new[0] / 10, teploty_new[0] % 10, teploty_new[1] / 10, teploty_new[1] % 10);
-	Serial.println ("dt>" + dateTime.ToString () + '<' + pomstr + '<' + gsmSignal);
-	delay (10);
-
-	}
+	if(isDebug)Serial.println ("dt>" + TSToString (ts) + '<' + pomstr + '<' + gsmSignal);
+	delay (10);	
 }
+
 void TempControl ()
 {
 	static boolean blockTempOn, blockTempOff;
@@ -1233,15 +1142,11 @@ void ClearRxBuffer ()
 	}
 }
 
-ISR (WDT_vect) {
-	volatile boolean tick1;
-	if (tick)tick1 = false;
-	else tick1 = true;
-	digitalWrite (17, tick1 ? HIGH : LOW);
-	//  Anything you use in here needs to be declared with "volatile" keyword
-
-	//  Track the passage of time.
-	//setup ();
-	Serial.println ("OK");
-
-}
+//ISR (WDT_vect) {
+//
+//	//  Anything you use in here needs to be declared with "volatile" keyword
+//
+//	//  Track the passage of time.
+//	//setup ();
+//
+//}

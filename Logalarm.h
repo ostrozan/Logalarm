@@ -40,21 +40,21 @@
 #define START_POINT 560
 
 #define RST 0x0000
-#define ALARM 0x0010
-#define ALARM_ACT 0x0020
-#define ALARM_DEACT 0x0030
-#define ON_TEMP 0x0040
-#define OFF_TEMP 0x0050
-#define ON_SWCLOCK 0x0060
-#define OFF_SWCLOCK 0x0070
-#define ON_SMS 0x0080
-#define OFF_SMS 0x0090
-#define ON_RNG 0x00a0
-#define OFF_RNG 0x00b0
-#define SEND_SMS 0x00c0
-#define GSM_QEST 0x00d0
-#define SYS_ZAP_GSM 0x00e0
-#define SYS_VYP_GSM 0x00f0
+#define ALARM 0x10
+#define ALARM_ACT 0x20
+#define ALARM_DEACT 0x30
+#define ON_TEMP 0x40
+#define OFF_TEMP 0x50
+#define ON_SWCLOCK 0x60
+#define OFF_SWCLOCK 0x70
+#define ON_SMS 0x80
+#define OFF_SMS 0x90
+#define ON_RNG 0xa0
+#define OFF_RNG 0xb0
+#define SEND_SMS 0xc0
+#define GSM_QEST 0xd0
+#define SYS_ZAP_GSM 0xe0
+#define SYS_VYP_GSM 0xf0
 
 #define CONTROLCOMBLUE
 #ifdef CONTROLCOMBLUE// opro komunikaci s programem pouzit bluetooth
@@ -258,7 +258,7 @@ char entry_loop_active;
 
 int entry_timer, exit_timer,alarm_timer,zone_out_timer,zone_block_timer;
 boolean alarmT1HiBlocked =false, alarmT2HiBlocked=false, alarmT1LoBlocked = false, alarmT2LoBlocked = false;
-boolean is_zone_out_blocked = false;
+boolean zone_out_blocked = false;
 //spinacky
 typedef struct
 {
